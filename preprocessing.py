@@ -1,56 +1,71 @@
-import cv2
 import numpy as np
+from scipy.spatial import Voronoi, voronoi_plot_2d
+import matplotlib.pyplot as plt
+from skimage.draw import disk
+from skimage.feature import blob_log
+from skimage import io
+from queue import Queue
 
-def locate_nuclei(image_path, merge_radius=5):
-    """
-    Finds the nuclei in the binary image given by `image_path`.
-    Thanks ChatGPT.
-    
-    Input:
-    - image_path: relative or full path to the binary image
-    - merge_radius: distance between two blogs that can be merged into one nucleus
-    
-    Output:
-    - nuclei_coordinates: returns a list of (x,y) coordinates of the nuclei in the picture.
-    """
-    # Read the binary image
-    img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+def initialize_blobs(image, centers):
+    for k, center in enumerate(centers, start=1):
+        rr, cc = disk(center, 1)
+        image[rr, cc] = k
 
-    # Find connected components in the binary image
-    _, labels = cv2.connectedComponents(img)
+def draw_circle(cx, cy, radius, image_shape):
+    rr, cc = np.meshgrid(
+        np.arange(max(0, cy - radius), min(image_shape[0], cy + radius + 1)),
+        np.arange(max(0, cx - radius), min(image_shape[1], cx + radius + 1)),
+        indexing='ij'
+    )
+    return rr.astype(int), cc.astype(int)
 
-    # Merge closely located nuclei using a distance threshold
-    merged_labels = np.zeros_like(labels)
-    nuclei_coordinates = []
+def grow_blobs(image, centers):
+    queues = [Queue() for _ in range(len(centers))]
+    for i, center in enumerate(centers):
+        queues[i].put(tuple(center))
+    while any(not queue.empty() for queue in queues):
+        for k, center in enumerate(centers):
+            if queues[k].empty():
+                continue
 
-    for label in range(1, np.max(labels) + 1):
-        # Extract the region corresponding to the current label
-        mask = np.uint8(labels == label)
+            current = queues[k].get()
+            i, j = current
+            if 0 <= i < image.shape[0] and 0 <= j < image.shape[1] and image[i][j] == 255:
+                image[i][j] = k + 1
+                queues[k].put((i+1, j))
+                queues[k].put((i-1, j))
+                queues[k].put((i, j+1))
+                queues[k].put((i, j-1))
 
-        # Find the centroid of the region
-        m = cv2.moments(mask)
-        if m["m00"] != 0:
-            cX = int(m["m10"] / m["m00"])
-            cY = int(m["m01"] / m["m00"])
-            centroid = (cX, cY)
+def plot_image_with_labels(image):
+    plt.imshow(image, cmap='jet')
+    plt.show()
 
-            # Check if there is a closely located nucleus
-            merge = False
-            for existing_centroid in nuclei_coordinates:
-                dist = np.linalg.norm(np.array(centroid) - np.array(existing_centroid))
-                if dist < merge_radius:
-                    merge = True
-                    break
 
-            if merge:
-                # Merge the centroids
-                existing_centroid = np.array(existing_centroid)
-                centroid = np.array(centroid)
-                new_centroid = tuple(np.round((existing_centroid + centroid) / 2).astype(int))
-                nuclei_coordinates = [c for c in nuclei_coordinates if not np.all(c == existing_centroid)]
-                nuclei_coordinates.append(new_centroid)
-            else:
-                # Add as a new nucleus
-                nuclei_coordinates.append(centroid)
+nuclei_img = io.imread('nuclei.tif')
+dendrites_img = io.imread('dendrites.tif')
 
-    return nuclei_coordinates
+# Find blobs
+blobs = blob_log(nuclei_img, max_sigma=80, min_sigma = 15, threshold=0.3, overlap = 0.2)
+
+# Color them with the starting color
+for k, blob in enumerate(blobs):
+    y, x, r = blob
+    dendrites_img[int(x)][int(y)] = k + 1  # 255 corresponds to white in uint8
+
+# Show blobs
+fig, ax = plt.subplots()
+ax.imshow(dendrites_img, cmap='gray')
+for blob in blobs:
+    y, x, area = blob
+    ax.add_patch(plt.Circle((x, y), area*np.sqrt(2), color='r', fill=False))
+
+plt.show()
+
+neuron_centers = np.array([[x,y] for (x, y, area) in blobs]).astype(int)
+
+# Grow the blobs until they reach black pixels
+grow_blobs(dendrites_img, neuron_centers)
+
+# Plot the result
+plot_image_with_labels(dendrites_img)
