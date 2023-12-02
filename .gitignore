@@ -1,2 +1,5 @@
 venv
 *.tif
+.comments
+.ipynb_checkpoints
+.jupyter_ystore.db
