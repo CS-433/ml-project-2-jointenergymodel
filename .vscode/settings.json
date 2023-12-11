@@ -4,6 +4,7 @@
         "imread",
         "imshow",
         "networkx",
-        "neurites"
+        "neurites",
+        "skeletonize"
     ]
 }

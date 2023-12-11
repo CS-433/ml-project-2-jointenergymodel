@@ -7,10 +7,12 @@ The main function is `preprocess`, which takes both binary image channels and re
 
 import sys
 import numpy as np
-from skimage.graph import pixel_graph
 import matplotlib.pyplot as plt
+from skimage.graph import pixel_graph
 from skimage.feature import blob_doh
 from skimage import io
+from skimage.morphology import skeletonize
+from scipy.spatial import cKDTree
 import networkx as nx
 
 
@@ -24,7 +26,8 @@ def compute_shortest_paths(image, positions):
         - distances: 2D array containing distances between each pair of positions.
     """
     # Create a graph with input positions as nodes
-    graph, nodes = pixel_graph(image)
+    # Connectivity of 2 because we skeletonized
+    graph, nodes = pixel_graph(image, connectivity=2)
     graph = nx.from_scipy_sparse_array(graph)
 
     # Compute the node label for each pixel
@@ -87,7 +90,7 @@ def plot_graph_on_image(image, centers, graph):
     pos = {i: (y, x) for i, (x, y) in enumerate(centers)}
 
     plt.imshow(image, cmap="gray")
-    nx.draw(graph, pos, node_color="g", node_size=100, edge_color="r")
+    nx.draw(graph, pos, node_color="g", node_size=50, edge_color="r")
     plt.show()
 
 def insert_circles(image, positions, radius):
@@ -105,6 +108,26 @@ def insert_circles(image, positions, radius):
         circle_mask = (x - pos[1]) ** 2 + (y - pos[0]) ** 2 <= radius ** 2
         image[circle_mask] = True
 
+def closest_true_pixels(image, positions):
+    """
+    Computes the closest white (True) pixel for each given position in a binary image.
+    Input:
+        - image: 2D numpy array of True/False.
+        - positions: List of (row, column) positions.
+    Output:
+        - closest_pixels: List of (row, column) positions corresponding to the closest white pixel for each input position.
+    """
+    white_pixels = np.argwhere(image)
+    tree = cKDTree(white_pixels)
+
+    # Query the tree for the closest white pixel for each input position
+    closest_indices = tree.query(positions)[1]
+    closest_pixels = [tuple(white_pixels[i]) for i in closest_indices]
+
+    assert len(closest_pixels) == len(positions)
+    assert all(image[pos] for pos in closest_pixels)
+    return closest_pixels
+
 def preprocess(nuclei_img, dendrites_img, graphical=False):
     """
     Pre-processes the nuclei and dendrites images (in their binary array format)
@@ -118,9 +141,11 @@ def preprocess(nuclei_img, dendrites_img, graphical=False):
     print("Refining the image...")
     merged_img = (nuclei_img != 0) | (dendrites_img != 0)
     insert_circles(merged_img, neuron_centers, 10)
+    merged_img = skeletonize(merged_img)
+    refined_neuron_centers = closest_true_pixels(merged_img, neuron_centers)
 
     print("Creating the graph...")
-    graph = create_graph(merged_img, neuron_centers)
+    graph = create_graph(merged_img, refined_neuron_centers)
 
     if graphical:
         # Plot the resulting graph
