@@ -1,160 +1,120 @@
+"""
+Data pre-processing
+Takes images as input and returns TMDs to be used for the MLP
+
+The main function is `preprocess` that takes both image channels and return the TMD
+"""
+
+import sys
 import numpy as np
-from scipy.spatial import Voronoi, voronoi_plot_2d
+from skimage.graph import pixel_graph
 import matplotlib.pyplot as plt
-from skimage.draw import disk
 from skimage.feature import blob_doh
 from skimage import io
-from queue import Queue
 import networkx as nx
 
-def create_adjacency_matrix(image, centers):
+
+def compute_shortest_paths(image, positions):
+    # Create a graph with input positions as nodes
+    graph, nodes = pixel_graph(image)
+    graph = nx.from_scipy_sparse_array(graph)
+
+    # Compute the node label for each pixel
+    pos_dict = {}
+    for index, pos in enumerate(nodes):
+        multi_dim_pos = np.unravel_index(pos, image.shape)
+        pos_dict[multi_dim_pos] = index
+
+    # Compute the distance between all pairs of nodes in the positions
+    distances = np.full((len(positions), len(positions)), np.nan)
+    for i, source in enumerate(positions):
+        for j, target in list(enumerate(positions))[i + 1:]:
+            source_node, target_node = pos_dict[source], pos_dict[target]
+            try:
+                weight = nx.shortest_path_length(graph, source_node, target_node)
+                distances[i][j] = weight
+            except nx.exception.NetworkXNoPath:
+                distances[i][j] = np.nan
+
+    return distances
+
+def create_graph(image, centers):
     """
-    Creates the adjancy matrix based on the modified image in which we spilled colors from the centers of the blob.
-    Two blobs will be adjacent in the resulting graph iff there are adjacent pixels of their resp. colors in the image.
+    Creates the graph from of the image and the nuclei
     Input:
-        - the binary image that has already been spilled with colors
+        - the binary image, with pixels as True or False
         - the list of centers of the blobs detected in the image
     Output:
-        - adjacency matrix, where 1 indicate neighbors and 0 not neighbors.
+        - the corresponding tree for this image
     """
-    num_nodes = len(centers)
-    adjacency_matrix = np.zeros((num_nodes, num_nodes), dtype=int)
+    # Compute shortest paths between input positions
+    distances = compute_shortest_paths(image, centers)
 
-    for i, center in enumerate(centers):
-        current_label = i + 1
-        blob_pixels = np.argwhere(image == current_label)
+    # Create a graph with 1..n nodes
+    graph = nx.Graph()
+    graph.add_nodes_from(range(len(centers)))
 
-        for pixel in blob_pixels:
-            neighbors = get_adjacent_pixels(pixel, image.shape)
-            for neighbor in neighbors:
-                if image[neighbor] != 0 and image[neighbor] != current_label and image[neighbor] <= num_nodes:
-                    adjacency_matrix[i, image[neighbor] - 1] = 1
+    # Add weighted edges to the graph
+    for i in range(len(centers)):
+        for j in range(i + 1, len(centers)):
+            weight = distances[i][j]
+            if not np.isnan(weight):  # Ignore infinite weights
+                graph.add_edge(i, j, weight=weight)
 
-    return adjacency_matrix
+    # Find the minimum spanning tree
+    mst = nx.minimum_spanning_tree(graph)
 
-def get_adjacent_pixels(pixel, image_shape):
+    return mst
+
+
+def plot_graph_on_image(image, centers, graph):
     """
-    Helper function that returns the adjacent pixels of a pixel in a image, given its shape.
+    Plots the graph on top of the original image
+    using the centers to get the positions of the nodes in the image
     Input:
-        - (x,y) coordinates of the pixel
-        - image shape
-    Output:
-        - list of (x,y) coordinates of neighbors
+        - the binary image of the neurites
+        - the list of positions for each node, in the order of the node number
+        - the graph to display
     """
-    i, j = pixel
-    neighbors = [
-        (i + 1, j),
-        (i - 1, j),
-        (i, j + 1),
-        (i, j - 1)
-    ]
+    # Swap x and y for correct positions with matplotlib
+    pos = {
+        i: (y, x) for i, (x, y) in enumerate(centers)
+    }
 
-    valid_neighbors = [(x, y) for x, y in neighbors if 0 <= x < image_shape[0] and 0 <= y < image_shape[1]]
-    return valid_neighbors
-
-def initialize_blobs(image, centers):
-    """
-    Puts the color of each blob at the center of the blob in the image
-    """
-    for k, center in enumerate(centers, start=1):
-        rr, cc = disk(center, 5)
-        image[rr, cc] = k
-
-def draw_circle(cx, cy, radius, image_shape):
-    """
-    Returns the array view for a circle centered in (cx, cy) and of radius `radius`.
-    Uses the image shape.
-    """
-    rr, cc = np.meshgrid(
-        np.arange(max(0, cy - radius), min(image_shape[0], cy + radius + 1)),
-        np.arange(max(0, cx - radius), min(image_shape[1], cx + radius + 1)),
-        indexing='ij'
-    )
-    return rr.astype(int), cc.astype(int)
-
-def grow_blobs(image, centers):
-    """
-    Assuming that the centers have been initialized with their respective colors,
-    spills the colors from the centers outwards, in turn, for each blob.
-    Continue until no pixel can be spilled anymore from any of its direct neighbors.
-    
-    Modifies the image in place
-    """
-    queues = [Queue() for _ in range(len(centers))]
-    for i, center in enumerate(centers):
-        queues[i].put(tuple(center))
-    while any(not queue.empty() for queue in queues):
-        for k, center in enumerate(centers):
-            if queues[k].empty():
-                continue
-
-            current = queues[k].get()
-            i, j = current
-            if 0 <= i < image.shape[0] and 0 <= j < image.shape[1] and image[i][j] == 255:
-                image[i][j] = k + 1
-                queues[k].put((i+1, j))
-                queues[k].put((i-1, j))
-                queues[k].put((i, j+1))
-                queues[k].put((i, j-1))
-
-
-def plot_graph_on_image(image, centers, G):
-    pos = {i: (y, x) for i, (x, y) in enumerate(centers)}  # Swap x and y for correct positions
-
-    plt.imshow(image, cmap='gray')
-    nx.draw(G, pos, node_color='g', node_size=100, edge_color='r')
+    plt.imshow(image, cmap="gray")
+    nx.draw(graph, pos, node_color="g", node_size=100, edge_color="r")
     plt.show()
+
 
 def preprocess(nuclei_img, dendrites_img, graphical=False):
     """
-    Preprocesses the nuclei and dendrites image (in their binary array format)
-    and returns the corersponding features
+    Pre-processes the nuclei and dendrites image (in their binary array format)
+    and returns the corresponding features
     """
     # Find blobs
+    print("Finding the nuclei...")
     blobs = blob_doh(nuclei_img, min_sigma=30, max_sigma=80)
 
-    # Color them with the starting color
-    for k, blob in enumerate(blobs):
-        y, x, r = blob
-        dendrites_img[int(x)][int(y)] = k + 1  # 255 corresponds to white in uint8
+    neuron_centers = [(int(x), int(y)) for (x, y, area) in blobs]
 
-    """
-    if graphical:
-        # Show blobs
-        fig, ax = plt.subplots()
-        ax.imshow(dendrites_img, cmap='gray')
-        for blob in blobs:
-            x, y, r = blob
-            ax.add_patch(plt.Circle((y, x), 2*r, color='r', fill=False))
+    merged_img = (nuclei_img != 0) | (dendrites_img != 0)
 
-        plt.show()
-    """
-
-    neuron_centers = np.array([[x,y] for (x, y, area) in blobs]).astype(int)
-
-    # Grow the blobs until they reach black pixels
-    grow_blobs(dendrites_img, neuron_centers)
-
-    """
-    if graphical:
-        # Plot the result
-        plt.imshow(dendrites_img, cmap='jet')
-        plt.show()
-    """
-
-    adjacency_matrix = create_adjacency_matrix(dendrites_img, neuron_centers)
-
-    # Create a graph from the adjacency matrix
-    G = nx.from_numpy_array(adjacency_matrix)
-    
-    # Revert the image back to normal colors
-    dendrites_img[dendrites_img != 0] = 255
+    print("Creating the graph...")
+    graph = create_graph(merged_img, neuron_centers)
 
     if graphical:
         # Plot the resulting graph
-        plot_graph_on_image(dendrites_img, neuron_centers, G)
-    
+        plot_graph_on_image(dendrites_img, neuron_centers, graph)
+
     # TODO: extract topological features
+    print("Extracting the topological features...")
 
+if len(sys.argv) != 3:
+    print("Usage: python preprocessing.py [nuclei_file_path] [dendrites_file_path]")
+    sys.exit(1)
 
-preprocess(io.imread('nuclei.tif'), io.imread('dendrites.tif'), graphical=True)
+# Extract the two arguments
+nuclei_file = io.imread(sys.argv[1])
+dendrites_file = io.imread(sys.argv[2])
+
+preprocess(nuclei_file, dendrites_file, graphical=True)
