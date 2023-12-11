@@ -9,6 +9,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from skimage.graph import pixel_graph
+from scipy.ndimage import binary_dilation
 from skimage.feature import blob_doh
 from skimage import io
 from skimage.morphology import skeletonize
@@ -93,21 +94,6 @@ def plot_graph_on_image(image, centers, graph):
     nx.draw(graph, pos, node_color="g", node_size=50, edge_color="r")
     plt.show()
 
-def insert_circles(image, positions, radius):
-    """
-    Inserts circles of "True" in a 2D numpy array around given positions (in place).
-    Input:
-        - image: 2D numpy array of True/False.
-        - positions: List of (row, column) positions where circles will be inserted.
-        - radius: Radius of the circles to be inserted.
-    """
-    rows, cols = image.shape
-    y, x = np.ogrid[:rows, :cols]
-
-    for pos in positions:
-        circle_mask = (x - pos[1]) ** 2 + (y - pos[0]) ** 2 <= radius ** 2
-        image[circle_mask] = True
-
 def closest_true_pixels(image, positions):
     """
     Computes the closest white (True) pixel for each given position in a binary image.
@@ -139,9 +125,16 @@ def preprocess(nuclei_img, dendrites_img, graphical=False):
     neuron_centers = [(int(x), int(y)) for (x, y, _) in blobs]
 
     print("Refining the image...")
+    # Merge the nuclei into the image since they provide useful information
+    # and morph into a binary image
     merged_img = (nuclei_img != 0) | (dendrites_img != 0)
-    insert_circles(merged_img, neuron_centers, 10)
+    # Binary dilation to "bone-ify" the image, hence allowing some black pixels
+    # inside the paths between two neurites
+    merged_img = binary_dilation(merged_img, iterations=11)
+    # Skeletonize the image to simplify the shortest path finding in the pixel graph
     merged_img = skeletonize(merged_img)
+    # Because we skeletonize the image, we need to find our new centers, that must be on white pixels
+    # Find the closest ones to the original 
     refined_neuron_centers = closest_true_pixels(merged_img, neuron_centers)
 
     print("Creating the graph...")
