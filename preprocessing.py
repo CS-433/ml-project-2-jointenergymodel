@@ -15,6 +15,8 @@ from skimage import io
 from skimage.morphology import skeletonize
 from scipy.spatial import cKDTree
 import networkx as nx
+from networkx2swc import networkx_to_swc
+from get_tmd import get_features
 
 
 def compute_shortest_paths(image, positions):
@@ -143,6 +145,12 @@ def preprocess(nuclei_img, dendrites_img, graphical=False):
     if graphical:
         # Plot the resulting graph
         plot_graph_on_image(dendrites_img, neuron_centers, graph)
+
+    # Extract the largest component to avoid the isolated nuclei
+    largest_cc = graph.subgraph(max(nx.connected_components(graph), key=len)).copy()
+    networkx_to_swc(largest_cc, refined_neuron_centers, 'temp.swc')
+
+    get_features('temp.swc')
 
     # TODO: Extract topological features
     print("Extracting the topological features...")
