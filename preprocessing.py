@@ -217,7 +217,7 @@ def preprocess_folder(nuclei_path, dendrites_path):
         preprocess(output_path, name, label_map, nuclei_img, dendrites_img)
 
 if len(sys.argv) != 3:
-    print("Usage: python preprocessing.py [nuclei_file_path] [dendrites_file_path]")
+    print("Usage: python preprocessing.py [nuclei_folder_path] [dendrites_folder_path]")
     sys.exit(1)
 
 # Extract the two arguments
