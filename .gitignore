@@ -6,3 +6,5 @@ venv
 .jupyter_ystore.db
 __pycache__
 *.swc
+*.zip
+output

@@ -6,6 +6,9 @@ The main function is `preprocess`, which takes both binary image channels and re
 """
 
 import sys
+import os
+import re
+import shutil
 import numpy as np
 import matplotlib.pyplot as plt
 from skimage.graph import pixel_graph
@@ -116,7 +119,34 @@ def closest_true_pixels(image, positions):
     assert all(image[pos] for pos in closest_pixels)
     return closest_pixels
 
-def preprocess(nuclei_img, dendrites_img, graphical=False):
+def extract_label_from_filename(filename):
+    # Define a regex pattern to match the desired label
+    pattern = r'Canton S(.*?)(?=Mitotracker)'
+
+    # Use re.search to find the match in the filename
+    match = re.search(pattern, filename)
+
+    if match:
+        # Extract the matched label group
+        info = match.group(1).strip()
+        return info
+    else:
+        return None
+
+def create_label_map(folder_path):
+    labels = []
+    label_map = {}
+    filenames = [f for f in os.listdir(folder_path) if f.endswith(".png")]
+
+    for filename in filenames:
+        label = extract_label_from_filename(filename)
+        if label is not None and label not in label_map:
+            labels.append(label)
+            label_map[label] = len(label_map)
+
+    return labels, label_map
+
+def preprocess(output_folder, name, label_map, nuclei_img, dendrites_img, graphical=False):
     """
     Pre-processes the nuclei and dendrites images (in their binary array format)
     and returns the corresponding topological features.
@@ -152,15 +182,43 @@ def preprocess(nuclei_img, dendrites_img, graphical=False):
     largest_cc = graph.subgraph(max(nx.connected_components(graph), key=len)).copy()
     networkx_to_swc(largest_cc, refined_neuron_centers, 'temp.swc')
 
-    get_features('temp.swc')
+    # Find the final x and y
+    x = get_features('temp.swc')
+    y = label_map[extract_label_from_filename(name)]
+    print(x, y)
 
+def preprocess_folder(nuclei_path, dendrites_path):
+    # Find output path and create it if necessary
+    output_path = os.path.join(os.path.dirname(nuclei_path), "output")
+    
+    # Delete the entire output directory if it exists
+    if os.path.exists(output_path):
+        shutil.rmtree(output_path)
+
+    # Recreate the output directory
+    os.makedirs(output_path)
+
+    suffix1 = "_w3confDAPI.STK_processed.png"
+    suffix2 = "_w2confmCherry.STK_processed.png"
+    all_nuclei = [f for f in os.listdir(nuclei_path) if f.endswith(suffix1)]
+
+    names = set(f.replace(suffix1, "") for f in all_nuclei)
+
+    labels, label_map = create_label_map(nuclei_path)
+
+    with open(os.path.join(output_path, "labels.txt"), 'w') as file:
+        for i, label in enumerate(labels):
+            file.write(f"{i} {label}\n")
+
+    for name in names:
+        print(f"* Computing for {name}")
+        nuclei_img = io.imread(os.path.join(nuclei_path, f"{name}{suffix1}"))
+        dendrites_img = io.imread(os.path.join(dendrites_path, f"{name}{suffix2}"))
+        preprocess(output_path, name, label_map, nuclei_img, dendrites_img)
 
 if len(sys.argv) != 3:
     print("Usage: python preprocessing.py [nuclei_file_path] [dendrites_file_path]")
     sys.exit(1)
 
 # Extract the two arguments
-nuclei_file = io.imread(sys.argv[1])
-dendrites_file = io.imread(sys.argv[2])
-
-preprocess(nuclei_file, dendrites_file, graphical=True)
+preprocess_folder(sys.argv[1], sys.argv[2])
