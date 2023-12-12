@@ -131,12 +131,12 @@ def preprocess(nuclei_img, dendrites_img, graphical=False):
     # and morph into a binary image
     merged_img = (nuclei_img != 0) | (dendrites_img != 0)
     # Binary dilation to "bone-ify" the image, hence allowing some black pixels
-    # inside the paths between two neurites
+    # inside the paths between two nuclei
     merged_img = binary_dilation(merged_img, iterations=11)
-    # Skeletonize the image to simplify the shortest path finding in the pixel graph
+    # Skeletonize the image to simplify shortest path finding in the pixel graph
     merged_img = skeletonize(merged_img)
-    # Because we skeletonize the image, we need to find our new centers, that must be on white pixels
-    # Find the closest ones to the original 
+    # Because we skeletonize the image, we need to find our new centers, they must be on white pixels
+    # Find the closest ones to the original centers
     refined_neuron_centers = closest_true_pixels(merged_img, neuron_centers)
 
     print("Creating the graph...")
@@ -146,14 +146,13 @@ def preprocess(nuclei_img, dendrites_img, graphical=False):
         # Plot the resulting graph
         plot_graph_on_image(dendrites_img, neuron_centers, graph)
 
+
+    print("Extracting the topological features...")
     # Extract the largest component to avoid the isolated nuclei
     largest_cc = graph.subgraph(max(nx.connected_components(graph), key=len)).copy()
     networkx_to_swc(largest_cc, refined_neuron_centers, 'temp.swc')
 
     get_features('temp.swc')
-
-    # TODO: Extract topological features
-    print("Extracting the topological features...")
 
 
 if len(sys.argv) != 3:
