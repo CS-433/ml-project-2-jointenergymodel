@@ -5,34 +5,34 @@ from matplotlib import pyplot as plt
 
 import networkx as nx
 
-def convert_to_swc(graph, output_file):
-    with open(output_file, 'w') as f:
-        node_id = 1
-        for node in nx.topological_sort(graph):
-            parent_id = node_id - 1 if node_id > 1 else -1  # Set -1 for the root node
-            #x, y, z = graph.nodes[node]['pos']  # Assuming you have 'pos' attribute for node positions
-            #radius = graph.nodes[node].get('radius', 1.0)  # Default radius is 1.0 if not specified
+# def convert_to_swc(graph, output_file):
+#     with open(output_file, 'w') as f:
+#         node_id = 1
+#         for node in nx.topological_sort(graph):
+#             parent_id = node_id - 1 if node_id > 1 else -1  # Set -1 for the root node
+#             #x, y, z = graph.nodes[node]['pos']  # Assuming you have 'pos' attribute for node positions
+#             #radius = graph.nodes[node].get('radius', 1.0)  # Default radius is 1.0 if not specified
 
-            line = f"{node_id} 1 x y z 0.1 {parent_id}\n"
-            f.write(line)
+#             line = f"{node_id} 1 x y z 0.1 {parent_id}\n"
+#             f.write(line)
 
-            node_id += 1
+#             node_id += 1
 
 
-def convert():
-    # Create a sample graph using NetworkX
-    G = nx.path_graph(10)
-    nx.draw(G)
-    pos = nx.spring_layout(G)
-    nx.set_node_attributes(G, pos, 'pos')
+# def convert():
+#     # Create a sample graph using NetworkX
+#     G = nx.path_graph(10)
+#     nx.draw(G)
+#     pos = nx.spring_layout(G)
+#     nx.set_node_attributes(G, pos, 'pos')
 
-    # Convert and save to SWC file
-    convert_to_swc(G, 'output.swc')
+#     # Convert and save to SWC file
+#     convert_to_swc(G, 'output.swc')
 
 # convert()
 
 
-def get_features(path):
+def get_features(path, resolution):
     """
     Extract features of the input graph
     Input:
@@ -61,7 +61,7 @@ def get_features(path):
     # ph_basal = tmd.methods.get_ph_neuron(neu, neurite_type="basal_dendrite")
 
     # Step 6: Plot the extracted topological data with three different ways
-    pers_image2test = tmd.analysis.get_persistence_image_data(ph_neu)
+    pers_image2test = tmd.analysis.get_persistence_image_data(ph_neu, resolution=resolution)
     print(pers_image2test)
     
     # plot.diagram(ph_neu)
@@ -84,4 +84,4 @@ def get_features(path):
     plt.imshow(pers_image2test)
 
     # plt.show()
-    return ph
+    return pers_image2test.flatten()

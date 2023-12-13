@@ -146,7 +146,7 @@ def create_label_map(folder_path):
 
     return labels, label_map
 
-def preprocess(output_folder, name, label_map, nuclei_img, dendrites_img, graphical=False):
+def preprocess(output_folder, name, label_map, nuclei_img, dendrites_img, pers_resolution=100, graphical=False):
     """
     Pre-processes the nuclei and dendrites images (in their binary array format)
     and returns the corresponding topological features.
@@ -183,11 +183,11 @@ def preprocess(output_folder, name, label_map, nuclei_img, dendrites_img, graphi
     networkx_to_swc(largest_cc, refined_neuron_centers, 'temp.swc')
 
     # Find the final x and y
-    x = get_features('temp.swc')
+    x = get_features('temp.swc', pers_resolution)
     y = label_map[extract_label_from_filename(name)]
     print(x, y)
 
-def preprocess_folder(nuclei_path, dendrites_path):
+def preprocess_folder(nuclei_path, dendrites_path, pers_resolution=100):
     # Find output path and create it if necessary
     output_path = os.path.join(os.path.dirname(nuclei_path), "output")
     
@@ -214,7 +214,7 @@ def preprocess_folder(nuclei_path, dendrites_path):
         print(f"* Computing for {name}")
         nuclei_img = io.imread(os.path.join(nuclei_path, f"{name}{suffix1}"))
         dendrites_img = io.imread(os.path.join(dendrites_path, f"{name}{suffix2}"))
-        preprocess(output_path, name, label_map, nuclei_img, dendrites_img)
+        preprocess(output_path, name, label_map, nuclei_img, dendrites_img, pers_resolution=pers_resolution)
 
 if len(sys.argv) != 3:
     print("Usage: python preprocessing.py [nuclei_folder_path] [dendrites_folder_path]")
