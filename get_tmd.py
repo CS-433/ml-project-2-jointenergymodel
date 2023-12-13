@@ -62,7 +62,8 @@ def get_features(path):
     # ph_basal = tmd.methods.get_ph_neuron(neu, neurite_type="basal_dendrite")
 
     # Step 6: Plot the extracted topological data with three different ways
-
+    pers_image2test = tmd.analysis.get_persistence_image_data(ph_neu)
+    print(pers_image2test)
     
     # plot.diagram(ph_neu)
 
@@ -79,6 +80,8 @@ def get_features(path):
     plt.show()
     plot.persistence_image(ph)
 
+    plt.show()
     # print(Zn, cmtruc)
+    plt.imshow(pers_image2test)
 
     plt.show()

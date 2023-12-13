@@ -22,7 +22,7 @@ def networkx_to_swc(graph, neurons, output_file):
         nb_soma = np.count_nonzero(ns==1)
         print(np.count_nonzero(ns==1))
         soma = node_sequence[0][0]
-        node_id_mapping[soma] = current_id
+        node_id_mapping[soma] = current_id + 1
 
 
 
@@ -30,6 +30,9 @@ def networkx_to_swc(graph, neurons, output_file):
         x, y = neurons[soma]
         line = f"{current_id} 1 {x} {y} 0.0 0.2 -1\n"
         f.write(line)
+        line = f"{current_id+1} 3 {x} {y} 1.0 0.2 1\n"
+        f.write(line)
+        current_id +=1
         current_id += 1
         nb_soma -= 1
 
