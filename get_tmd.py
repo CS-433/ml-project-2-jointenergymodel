@@ -1,6 +1,5 @@
 # Import the TMD toolkit in IPython
 import tmd
-from tmd.view import plot
 from tmd.view import view
 from matplotlib import pyplot as plt
 
@@ -44,8 +43,8 @@ def get_features(path):
     neu = tmd.io.load_neuron(path)
 
     # Visualize the neuron
-    view.neuron(neu)
-    plt.show()
+    # view.neuron(neu)
+    # plt.show()
 
     # Extract the tmd of a neurite, i.e., neuronal tree
     ph = tmd.methods.get_persistence_diagram(neu.neurites[0])
@@ -71,17 +70,18 @@ def get_features(path):
     # view.neuron(neu, neurite_type=["apical_dendrite"])
 
     # # Visualize the persistence diagram
-    plot.diagram(ph)
+    # plot.diagram(ph)
 
     # # Visualize the persistence barcode
-    plot.barcode(ph)
+    # plot.barcode(ph)
 
     # # Visualize the persistence image
-    plt.show()
-    plot.persistence_image(ph)
+    # plt.show()
+    # plot.persistence_image(ph)
 
     plt.show()
     # print(Zn, cmtruc)
     plt.imshow(pers_image2test)
 
-    plt.show()
+    # plt.show()
+    return ph

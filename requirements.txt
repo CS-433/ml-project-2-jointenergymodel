@@ -3,3 +3,4 @@ networkx==3.2.1
 numpy==1.26.2
 scikit-image==0.22.0
 opencv-python==4.8.1.78
+TMD==2.4.0

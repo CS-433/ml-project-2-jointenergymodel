@@ -4,3 +4,7 @@ venv
 .comments
 .ipynb_checkpoints
 .jupyter_ystore.db
+__pycache__
+*.swc
+*.zip
+output
