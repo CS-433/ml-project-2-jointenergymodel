@@ -187,7 +187,7 @@ def preprocess(output_folder, name, label_map, nuclei_img, dendrites_img, pers_r
     # Find the final x and y
     x = get_features('temp.swc', pers_resolution)
     y = label_map[extract_label_from_filename(name)]
-    print(x, y)
+    return np.concatenate(([y], x, [largest_cc.order()]))
 
 def preprocess_folder(nuclei_path, dendrites_path, pers_resolution=100):
     # Find output path and create it if necessary
@@ -212,11 +212,16 @@ def preprocess_folder(nuclei_path, dendrites_path, pers_resolution=100):
         for i, label in enumerate(labels):
             file.write(f"{i} {label}\n")
 
-    for name in names:
-        print(f"* Computing for {name}")
-        nuclei_img = io.imread(os.path.join(nuclei_path, f"{name}{suffix1}"))
-        dendrites_img = io.imread(os.path.join(dendrites_path, f"{name}{suffix2}"))
-        preprocess(output_path, name, label_map, nuclei_img, dendrites_img, pers_resolution=pers_resolution, graphical=True)
+    with open(os.path.join(output_path, "dataset.csv"), 'w') as file:
+        for name in names:
+            print(f"* Computing for {name}")
+            nuclei_img = io.imread(os.path.join(nuclei_path, f"{name}{suffix1}"))
+            dendrites_img = io.imread(os.path.join(dendrites_path, f"{name}{suffix2}"))
+            try:
+                res = preprocess(output_path, name, label_map, nuclei_img, dendrites_img, pers_resolution=pers_resolution, graphical=True)
+                np.savetxt(file, [res], delimiter=',')
+            except (np.linalg.LinAlgError, ValueError):
+                print(":( Failed for this image")
 
 if len(sys.argv) != 3:
     print("Usage: python preprocessing.py [nuclei_folder_path] [dendrites_folder_path]")
