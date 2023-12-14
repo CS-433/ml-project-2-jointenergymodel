@@ -197,7 +197,7 @@ def preprocess_folder(pers_resolution=100):
                 try:
                     res = preprocess(output_path, name, y, nuclei_img, dendrites_img, pers_resolution=pers_resolution)
                     np.savetxt(file, [res], delimiter=',')
-                except (np.linalg.LinAlgError, ValueError):
+                except (np.linalg.LinAlgError, ValueError, IndexError):
                     print(":( Failed for this image")
 
 if len(sys.argv) != 1:
