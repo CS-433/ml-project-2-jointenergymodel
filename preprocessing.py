@@ -84,7 +84,7 @@ def create_graph(image, centers):
     return mst
 
 
-def plot_graph_on_image(image, centers, graph):
+def plot_graph_on_image(output_folder, name, image, centers, graph):
     """
     Plots the Minimum Spanning Tree (MST) graph on top of the original image.
     Input:
@@ -95,9 +95,11 @@ def plot_graph_on_image(image, centers, graph):
     # Swap x and y for correct positions with matplotlib
     pos = {i: (y, x) for i, (x, y) in enumerate(centers)}
 
+    plt.figure()
     plt.imshow(image, cmap="gray")
-    nx.draw(graph, pos, node_color="g", node_size=50, edge_color="r")
-    plt.show()
+    nx.draw(graph, pos, node_color="g", node_size=10, edge_color="r")
+    plt.savefig(os.path.join(output_folder, name+'-graph.png'), bbox_inches='tight')
+    plt.clf()
 
 def closest_true_pixels(image, positions):
     """
@@ -174,7 +176,7 @@ def preprocess(output_folder, name, label_map, nuclei_img, dendrites_img, pers_r
 
     if graphical:
         # Plot the resulting graph
-        plot_graph_on_image(dendrites_img, neuron_centers, graph)
+        plot_graph_on_image(output_folder, name, dendrites_img, neuron_centers, graph)
 
 
     print("Extracting the topological features...")
@@ -185,7 +187,7 @@ def preprocess(output_folder, name, label_map, nuclei_img, dendrites_img, pers_r
     # Find the final x and y
     x = get_features('temp.swc', pers_resolution)
     y = label_map[extract_label_from_filename(name)]
-    print(x, y)
+    return np.concatenate(([y], x, [largest_cc.order()]))
 
 def preprocess_folder(nuclei_path, dendrites_path, pers_resolution=100):
     # Find output path and create it if necessary
@@ -210,11 +212,16 @@ def preprocess_folder(nuclei_path, dendrites_path, pers_resolution=100):
         for i, label in enumerate(labels):
             file.write(f"{i} {label}\n")
 
-    for name in names:
-        print(f"* Computing for {name}")
-        nuclei_img = io.imread(os.path.join(nuclei_path, f"{name}{suffix1}"))
-        dendrites_img = io.imread(os.path.join(dendrites_path, f"{name}{suffix2}"))
-        preprocess(output_path, name, label_map, nuclei_img, dendrites_img, pers_resolution=pers_resolution)
+    with open(os.path.join(output_path, "dataset.csv"), 'w') as file:
+        for name in names:
+            print(f"* Computing for {name}")
+            nuclei_img = io.imread(os.path.join(nuclei_path, f"{name}{suffix1}"))
+            dendrites_img = io.imread(os.path.join(dendrites_path, f"{name}{suffix2}"))
+            try:
+                res = preprocess(output_path, name, label_map, nuclei_img, dendrites_img, pers_resolution=pers_resolution, graphical=True)
+                np.savetxt(file, [res], delimiter=',')
+            except (np.linalg.LinAlgError, ValueError):
+                print(":( Failed for this image")
 
 if len(sys.argv) != 3:
     print("Usage: python preprocessing.py [nuclei_folder_path] [dendrites_folder_path]")
