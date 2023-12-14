@@ -1,10 +1,13 @@
 {
     "cSpell.words": [
         "cmap",
+        "DAPI",
         "imread",
         "imshow",
+        "linalg",
         "networkx",
         "neurites",
+        "savetxt",
         "skeletonize"
     ]
 }

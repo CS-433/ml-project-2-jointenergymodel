@@ -8,3 +8,6 @@ __pycache__
 *.swc
 *.zip
 output
+dendrites
+nuclei
+input
