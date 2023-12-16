@@ -97,8 +97,9 @@ def plot_graph_on_image(output_folder, name, image, centers, graph):
     plt.figure()
     plt.imshow(image, cmap="gray")
     nx.draw(graph, pos, node_color="g", node_size=10, edge_color="r")
-    plt.savefig(os.path.join(output_folder, name+'-graph.png'), bbox_inches='tight')
+    plt.savefig(os.path.join(output_folder, name + "-graph.png"), bbox_inches="tight")
     plt.clf()
+
 
 def closest_true_pixels(image, positions):
     """
@@ -120,7 +121,16 @@ def closest_true_pixels(image, positions):
     assert all(image[pos] for pos in closest_pixels)
     return closest_pixels
 
-def preprocess(output_folder, name, label, nuclei_img, dendrites_img, pers_resolution=100, graphical=False):
+
+def preprocess(
+    output_folder,
+    name,
+    label,
+    nuclei_img,
+    dendrites_img,
+    pers_resolution=100,
+    graphical=False,
+):
     """
     Pre-processes the nuclei and dendrites images (in their binary array format)
     and returns the corresponding topological features.
@@ -150,15 +160,15 @@ def preprocess(output_folder, name, label, nuclei_img, dendrites_img, pers_resol
         # Plot the resulting graph
         plot_graph_on_image(output_folder, name, dendrites_img, neuron_centers, graph)
 
-
     print("Extracting the topological features...")
     # Extract the largest component to avoid the isolated nuclei
     largest_cc = graph.subgraph(max(nx.connected_components(graph), key=len)).copy()
-    networkx_to_swc(largest_cc, refined_neuron_centers, 'temp.swc')
+    networkx_to_swc(largest_cc, refined_neuron_centers, "temp.swc")
 
     # Find the final x and y
-    x = get_features('temp.swc', pers_resolution)
+    x = get_features("temp.swc", pers_resolution)
     return np.concatenate(([label], x, [largest_cc.order()]))
+
 
 def preprocess_folder(pers_resolution=100):
     # Input path is always input
@@ -166,7 +176,7 @@ def preprocess_folder(pers_resolution=100):
 
     # Find output path and create it if necessary
     output_path = os.path.join(os.path.dirname(input_path), "output")
-    
+
     # Delete the entire output directory if it exists
     if os.path.exists(output_path):
         shutil.rmtree(output_path)
@@ -175,30 +185,50 @@ def preprocess_folder(pers_resolution=100):
     os.makedirs(output_path)
 
     # Get all sub-folders/classification labels
-    labels = sorted([f for f in os.listdir(input_path) if os.path.isdir(os.path.join(input_path, f))])
+    labels = sorted(
+        [
+            f
+            for f in os.listdir(input_path)
+            if os.path.isdir(os.path.join(input_path, f))
+        ]
+    )
 
     # Save the labels
-    with open(os.path.join(output_path, "labels.txt"), 'w') as file:
+    with open(os.path.join(output_path, "labels.txt"), "w") as file:
         for i, label in enumerate(labels):
             file.write(f"{i} {label}\n")
-    
+
     # Compute the dataset, one image at a time
-    with open(os.path.join(output_path, "dataset.csv"), 'w') as file:
+    with open(os.path.join(output_path, "dataset.csv"), "w") as file:
         for y, label in enumerate(labels):
             print("****************************")
             print(f"Considering label `{label}`")
-            nuclei_paths = [f for f in os.listdir(os.path.join(input_path, label, "nuclei"))]
+            nuclei_paths = [
+                f for f in os.listdir(os.path.join(input_path, label, "nuclei"))
+            ]
             for nuclei_path in nuclei_paths:
                 name = nuclei_path.replace("w3confDAPI", "")
                 print(f"* Computing for {name}")
                 dendrites_path = nuclei_path.replace("w3confDAPI", "w2confmCherry")
-                nuclei_img = io.imread(os.path.join(input_path, label, "nuclei", nuclei_path))
-                dendrites_img = io.imread(os.path.join(input_path, label, "dendrites", dendrites_path))
+                nuclei_img = io.imread(
+                    os.path.join(input_path, label, "nuclei", nuclei_path)
+                )
+                dendrites_img = io.imread(
+                    os.path.join(input_path, label, "dendrites", dendrites_path)
+                )
                 try:
-                    res = preprocess(output_path, name, y, nuclei_img, dendrites_img, pers_resolution=pers_resolution)
-                    np.savetxt(file, [res], delimiter=',')
+                    res = preprocess(
+                        output_path,
+                        name,
+                        y,
+                        nuclei_img,
+                        dendrites_img,
+                        pers_resolution=pers_resolution,
+                    )
+                    np.savetxt(file, [res], delimiter=",")
                 except (np.linalg.LinAlgError, ValueError, IndexError):
                     print(":( Failed for this image")
+
 
 if len(sys.argv) != 1:
     print("Usage: python preprocessing.py")

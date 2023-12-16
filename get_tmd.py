@@ -1,5 +1,6 @@
 import tmd
 
+
 def get_features(path, resolution):
     """
     Extract features of the input graph
