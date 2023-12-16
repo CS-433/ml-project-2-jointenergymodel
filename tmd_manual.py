@@ -54,7 +54,7 @@ def compute_tmd(root, tree, positions, Leaves):
     return TMD
 
 
-graph = nx.generators.trees.random_tree(10)
+graph = nx.generators.trees.random_tree(50)
 pos = nx.spring_layout(graph)
 
 node_sequence = sorted(graph.degree, key=lambda x: x[1], reverse=True)
@@ -72,12 +72,12 @@ nx.draw(graph, pos=pos, with_labels=True)
 diag = np.array(barcode)
 print(diag)
 
-#fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(12, 5))
-plot_persistence_diagram(persistence=diag)
-plot_persistence_barcode(persistence=diag)
+# fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(12, 5))
+# plot_persistence_diagram(persistence=diag)
+# plot_persistence_barcode(persistence=diag)
 
 
-PI = PersistenceImage(bandwidth=1e-4, weight=lambda x: x[1]**2, im_range=[0,.004,0,.004], resolution=[100,100])
+PI = PersistenceImage(resolution=[100,100])
 pi = PI.fit_transform([diag])
 
 plt.imshow(np.flip(np.reshape(pi[0], [100,100]), 0))
