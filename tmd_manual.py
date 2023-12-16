@@ -1,7 +1,8 @@
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
-import gudhi
+from gudhi import plot_persistence_diagram, plot_persistence_barcode
+from gudhi.representations import PersistenceImage
 
 def compute_tmd(root, tree, positions, Leaves):
     """
@@ -72,12 +73,11 @@ diag = np.array(barcode)
 print(diag)
 
 #fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(12, 5))
-gudhi.plot_persistence_diagram(persistence=diag)
-gudhi.plot_persistence_barcode(persistence=diag)
+plot_persistence_diagram(persistence=diag)
+plot_persistence_barcode(persistence=diag)
 
 
-print(gudhi.__version__)
-PI = gudhi.representations.PersistenceImage(bandwidth=1e-4, weight=lambda x: x[1]**2, im_range=[0,.004,0,.004], resolution=[100,100])
+PI = PersistenceImage(bandwidth=1e-4, weight=lambda x: x[1]**2, im_range=[0,.004,0,.004], resolution=[100,100])
 pi = PI.fit_transform([diag])
 
 plt.imshow(np.flip(np.reshape(pi[0], [100,100]), 0))

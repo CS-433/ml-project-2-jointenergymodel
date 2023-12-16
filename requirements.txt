@@ -6,3 +6,4 @@ opencv-python==4.8.1.78
 TMD==2.4.0
 pandas==2.1.4
 torch==2.1.2
+gudhi==3.8.0
