@@ -33,3 +33,5 @@ def networkx_to_swc(graph, neurons, output_file):
 
             node_id_mapping[child_id] = current_id
             current_id += 1
+
+
