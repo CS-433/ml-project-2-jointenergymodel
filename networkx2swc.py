@@ -1,5 +1,6 @@
 import networkx as nx
 
+
 def networkx_to_swc(graph, neurons, output_file):
     """
     Writes an swc file of the Networkx tree in input.
@@ -9,7 +10,7 @@ def networkx_to_swc(graph, neurons, output_file):
     Writes:
         - an SWC file
     """
-    with open(output_file, 'w') as f:
+    with open(output_file, "w") as f:
         assert nx.is_tree(graph)
 
         node_id_mapping = {}
@@ -23,7 +24,6 @@ def networkx_to_swc(graph, neurons, output_file):
         f.write(f"2 3 {x} {y} 0 2 1\n")
         node_id_mapping[soma] = 2
         current_id += 2
-
 
         for parent_id, child_id in nx.dfs_edges(graph, source=soma):
             parent_id = node_id_mapping[parent_id]

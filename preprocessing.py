@@ -7,7 +7,6 @@ The main function is `preprocess`, which takes both binary image channels and re
 
 import sys
 import os
-import re
 import shutil
 import numpy as np
 import matplotlib.pyplot as plt
@@ -84,7 +83,7 @@ def create_graph(image, centers):
     return mst
 
 
-def plot_graph_on_image(image, centers, graph):
+def plot_graph_on_image(output_folder, name, image, centers, graph):
     """
     Plots the Minimum Spanning Tree (MST) graph on top of the original image.
     Input:
@@ -95,9 +94,12 @@ def plot_graph_on_image(image, centers, graph):
     # Swap x and y for correct positions with matplotlib
     pos = {i: (y, x) for i, (x, y) in enumerate(centers)}
 
+    plt.figure()
     plt.imshow(image, cmap="gray")
-    nx.draw(graph, pos, node_color="g", node_size=50, edge_color="r")
-    plt.show()
+    nx.draw(graph, pos, node_color="g", node_size=10, edge_color="r")
+    plt.savefig(os.path.join(output_folder, name + "-graph.png"), bbox_inches="tight")
+    plt.clf()
+
 
 def closest_true_pixels(image, positions):
     """
@@ -119,34 +121,16 @@ def closest_true_pixels(image, positions):
     assert all(image[pos] for pos in closest_pixels)
     return closest_pixels
 
-def extract_label_from_filename(filename):
-    # Define a regex pattern to match the desired label
-    pattern = r'Canton S(.*?)(?=Mitotracker)'
 
-    # Use re.search to find the match in the filename
-    match = re.search(pattern, filename)
-
-    if match:
-        # Extract the matched label group
-        info = match.group(1).strip()
-        return info
-    else:
-        return None
-
-def create_label_map(folder_path):
-    labels = []
-    label_map = {}
-    filenames = [f for f in os.listdir(folder_path) if f.endswith(".png")]
-
-    for filename in filenames:
-        label = extract_label_from_filename(filename)
-        if label is not None and label not in label_map:
-            labels.append(label)
-            label_map[label] = len(label_map)
-
-    return labels, label_map
-
-def preprocess(output_folder, name, label_map, nuclei_img, dendrites_img, pers_resolution=100, graphical=False):
+def preprocess(
+    output_folder,
+    name,
+    label,
+    nuclei_img,
+    dendrites_img,
+    pers_resolution=100,
+    graphical=False,
+):
     """
     Pre-processes the nuclei and dendrites images (in their binary array format)
     and returns the corresponding topological features.
@@ -174,23 +158,25 @@ def preprocess(output_folder, name, label_map, nuclei_img, dendrites_img, pers_r
 
     if graphical:
         # Plot the resulting graph
-        plot_graph_on_image(dendrites_img, neuron_centers, graph)
-
+        plot_graph_on_image(output_folder, name, dendrites_img, neuron_centers, graph)
 
     print("Extracting the topological features...")
     # Extract the largest component to avoid the isolated nuclei
     largest_cc = graph.subgraph(max(nx.connected_components(graph), key=len)).copy()
-    networkx_to_swc(largest_cc, refined_neuron_centers, 'temp.swc')
+    networkx_to_swc(largest_cc, refined_neuron_centers, "temp.swc")
 
     # Find the final x and y
-    x = get_features('temp.swc', pers_resolution)
-    y = label_map[extract_label_from_filename(name)]
-    print(x, y)
+    x = get_features("temp.swc", pers_resolution)
+    return np.concatenate(([label], x, [largest_cc.order()]))
 
-def preprocess_folder(nuclei_path, dendrites_path, pers_resolution=100):
+
+def preprocess_folder(pers_resolution=100):
+    # Input path is always input
+    input_path = "input"
+
     # Find output path and create it if necessary
-    output_path = os.path.join(os.path.dirname(nuclei_path), "output")
-    
+    output_path = os.path.join(os.path.dirname(input_path), "output")
+
     # Delete the entire output directory if it exists
     if os.path.exists(output_path):
         shutil.rmtree(output_path)
@@ -198,27 +184,55 @@ def preprocess_folder(nuclei_path, dendrites_path, pers_resolution=100):
     # Recreate the output directory
     os.makedirs(output_path)
 
-    suffix1 = "_w3confDAPI.STK_processed.png"
-    suffix2 = "_w2confmCherry.STK_processed.png"
-    all_nuclei = [f for f in os.listdir(nuclei_path) if f.endswith(suffix1)]
+    # Get all sub-folders/classification labels
+    labels = sorted(
+        [
+            f
+            for f in os.listdir(input_path)
+            if os.path.isdir(os.path.join(input_path, f))
+        ]
+    )
 
-    names = set(f.replace(suffix1, "") for f in all_nuclei)
-
-    labels, label_map = create_label_map(nuclei_path)
-
-    with open(os.path.join(output_path, "labels.txt"), 'w') as file:
+    # Save the labels
+    with open(os.path.join(output_path, "labels.txt"), "w") as file:
         for i, label in enumerate(labels):
             file.write(f"{i} {label}\n")
 
-    for name in names:
-        print(f"* Computing for {name}")
-        nuclei_img = io.imread(os.path.join(nuclei_path, f"{name}{suffix1}"))
-        dendrites_img = io.imread(os.path.join(dendrites_path, f"{name}{suffix2}"))
-        preprocess(output_path, name, label_map, nuclei_img, dendrites_img, pers_resolution=pers_resolution)
+    # Compute the dataset, one image at a time
+    with open(os.path.join(output_path, "dataset.csv"), "w") as file:
+        for y, label in enumerate(labels):
+            print("****************************")
+            print(f"Considering label `{label}`")
+            nuclei_paths = [
+                f for f in os.listdir(os.path.join(input_path, label, "nuclei"))
+            ]
+            for nuclei_path in nuclei_paths:
+                name = nuclei_path.replace("w3confDAPI", "")
+                print(f"* Computing for {name}")
+                dendrites_path = nuclei_path.replace("w3confDAPI", "w2confmCherry")
+                nuclei_img = io.imread(
+                    os.path.join(input_path, label, "nuclei", nuclei_path)
+                )
+                dendrites_img = io.imread(
+                    os.path.join(input_path, label, "dendrites", dendrites_path)
+                )
+                try:
+                    res = preprocess(
+                        output_path,
+                        name,
+                        y,
+                        nuclei_img,
+                        dendrites_img,
+                        pers_resolution=pers_resolution,
+                    )
+                    np.savetxt(file, [res], delimiter=",")
+                except (np.linalg.LinAlgError, ValueError, IndexError):
+                    print(":( Failed for this image")
 
-if len(sys.argv) != 3:
-    print("Usage: python preprocessing.py [nuclei_folder_path] [dendrites_folder_path]")
+
+if len(sys.argv) != 1:
+    print("Usage: python preprocessing.py")
     sys.exit(1)
 
 # Extract the two arguments
-preprocess_folder(sys.argv[1], sys.argv[2])
+preprocess_folder()
