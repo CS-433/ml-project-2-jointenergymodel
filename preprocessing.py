@@ -226,8 +226,8 @@ def preprocess_folder(pers_resolution=100):
                         pers_resolution=pers_resolution,
                     )
                     np.savetxt(file, [res], delimiter=",")
-                except (np.linalg.LinAlgError, ValueError, IndexError):
-                    print(":( Failed for this image")
+                except (np.linalg.LinAlgError, ValueError, IndexError) as e:
+                    print(f":( Failed for this image, reason: {e}")
 
 
 if len(sys.argv) != 1:

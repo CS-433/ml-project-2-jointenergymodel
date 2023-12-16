@@ -1,5 +1,36 @@
 import tmd
+import numpy as np
 
+def get_persistent_entropy(ph_neu):
+    """
+    Computes the persistent entropy of a persistence diagram.
+
+    Parameters:
+    - ph_neu: Persistence diagram.
+
+    Returns:
+    - float: Persistent entropy value.
+    """
+    # Extract the persistence intervals from the input
+    intervals = ph_neu
+    
+    # Filter out infinite intervals (unbounded persistence)
+    finite_intervals = np.array([interval for interval in intervals if np.isfinite(interval).all()])
+
+    # Handle the case where there are no finite intervals
+    if len(finite_intervals) == 0:
+        return 0.0
+
+    # Calculate the length of each bar
+    lengths = np.abs(finite_intervals[:, 1] - finite_intervals[:, 0])
+
+    # Calculate the total length of all bars
+    total_length = np.sum(lengths)
+
+    # Compute the persistent entropy using the formula from the paper
+    persistent_entropy = -np.sum(lengths / total_length * np.log((lengths + 1e-10) / total_length))
+
+    return persistent_entropy
 
 def get_features(path, resolution):
     """
@@ -16,5 +47,7 @@ def get_features(path, resolution):
 
     # Get the persistance image
     image = tmd.analysis.get_persistence_image_data(ph_neu, resolution=resolution)
+    
+    persistent_entropy = get_persistent_entropy(ph_neu)
 
-    return image.flatten()
+    return np.concatenate((image.flatten(), [persistent_entropy]))
