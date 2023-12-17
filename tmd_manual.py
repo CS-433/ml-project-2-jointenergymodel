@@ -11,7 +11,7 @@ def compute_tmd(tree, positions):
     positions is a dictionary with the positions (numpy array) associated to each node
     """
     assert nx.is_tree(tree)
-    N = tree.size() + 1  # number of nodes
+    N = len(positions)
 
     # get root
     node_sequence = sorted(tree.degree, key=lambda x: x[1], reverse=True)
@@ -30,7 +30,6 @@ def compute_tmd(tree, positions):
         parent[child_id] = parent_id
         children[parent_id].append(child_id)
 
-    print(parent)
     TMD = []
     # A is the list of active nodes
     A = Leaves
@@ -79,6 +78,7 @@ def get_TMD_vector(bc, reso=100, graphic=False):
     return pi2.flatten()
 
 
+'''
 graph = nx.generators.trees.random_tree(15)
 pos = nx.spring_layout(graph)
 
@@ -113,3 +113,4 @@ print(vect.shape)
 
 
 plt.show()
+'''

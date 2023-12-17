@@ -1,5 +1,5 @@
-import tmd
 import numpy as np
+from tmd_manual import compute_tmd, get_TMD_vector
 
 
 def get_persistent_entropy(ph_neu):
@@ -38,22 +38,13 @@ def get_persistent_entropy(ph_neu):
     return persistent_entropy
 
 
-def get_features(path, resolution):
-    """
-    Extract features of the input graph
-    Input:
-        - path: A string of the path to the .swc
-        - visual: A Bool that indicates if the user wants visuals
-    """
-    # Load the neuron
-    neu = tmd.io.load_neuron(path)
+def get_features(graph, pos, resolution):
+    # Compute the barcode
+    barcode = compute_tmd(graph, np.array(pos))
 
-    # Extract the ph diagram of a neuron's trees
-    ph_neu = tmd.methods.get_ph_neuron(neu)
+    persistent_entropy = get_persistent_entropy(barcode)
 
     # Get the persistance image
-    image = tmd.analysis.get_persistence_image_data(ph_neu, resolution=resolution)
+    image = get_TMD_vector(barcode, resolution, False)
 
-    persistent_entropy = get_persistent_entropy(ph_neu)
-
-    return np.concatenate((image.flatten(), [persistent_entropy]))
+    return np.concatenate((image, [persistent_entropy]))

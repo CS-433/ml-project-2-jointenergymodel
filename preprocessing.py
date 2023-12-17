@@ -3,6 +3,7 @@ Data pre-processing
 Converts binary images of nuclei and dendrites into a Minimum Spanning Tree (MST) graph representation.
 
 The main function is `preprocess`, which takes both binary image channels and returns the corresponding topological features.
+Then `preprocess_folder` executes it on a batch of files.
 """
 
 import sys
@@ -17,7 +18,6 @@ from skimage import io
 from skimage.morphology import skeletonize
 from scipy.spatial import cKDTree
 import networkx as nx
-from networkx2swc import networkx_to_swc
 from get_tmd import get_features
 
 
@@ -178,20 +178,24 @@ def preprocess(
         plot_graph_on_image(dendrites_img, neuron_centers, graph)
 
     print("Extracting the topological features...")
+    # Rename the nodes
+    assert graph.order() == len(neuron_centers)
+    graph = nx.relabel_nodes(graph, {old: new for new, old in enumerate(neuron_centers)})
     # Extract the largest component to avoid the isolated nuclei
     largest_cc = graph.subgraph(max(nx.connected_components(graph), key=len)).copy()
+
     if graphical:
         # Plot the connected component we consider
         plot_graph_on_image(dendrites_img, neuron_centers, largest_cc)
-    networkx_to_swc(largest_cc, refined_neuron_centers, "temp.swc")
 
-    # Find the final x and y
-    x = get_features("temp.swc", pers_resolution)
+    # Find the final features
+    x = get_features(largest_cc, neuron_centers, pers_resolution)
+
     return np.concatenate(([label], x, [largest_cc.order()]))
 
 
 def preprocess_folder(pers_resolution=100):
-    # Input path is always input
+    # Input path is always `input`
     input_path = "input"
 
     # Find output path and create it if necessary
@@ -236,18 +240,15 @@ def preprocess_folder(pers_resolution=100):
                 dendrites_img = io.imread(
                     os.path.join(input_path, label, "dendrites", dendrites_path)
                 )
-                try:
-                    res = preprocess(
-                        output_path,
-                        name,
-                        y,
-                        nuclei_img,
-                        dendrites_img,
-                        pers_resolution=pers_resolution,
-                    )
-                    np.savetxt(file, [res], delimiter=",")
-                except (np.linalg.LinAlgError, ValueError, IndexError) as e:
-                    print(f":( Failed for this image, reason: {e}")
+                res = preprocess(
+                    output_path,
+                    name,
+                    y,
+                    nuclei_img,
+                    dendrites_img,
+                    pers_resolution=pers_resolution,
+                )
+                np.savetxt(file, [res], delimiter=",")
 
 
 if len(sys.argv) != 1:
