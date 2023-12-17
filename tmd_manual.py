@@ -4,25 +4,26 @@ import matplotlib.pyplot as plt
 from gudhi import plot_persistence_diagram, plot_persistence_barcode
 from gudhi.representations import PersistenceImage
 
+
 def compute_tmd(tree, positions):
     """
     tree is the tree structure, is Networkx
     positions is a dictionary with the positions (numpy array) associated to each node
     """
     assert nx.is_tree(tree)
-    N = tree.size() + 1   #number of nodes
+    N = tree.size() + 1  # number of nodes
 
-    #get root
+    # get root
     node_sequence = sorted(tree.degree, key=lambda x: x[1], reverse=True)
     root = node_sequence[0][0]
 
-    #construct leaves
+    # construct leaves
     Leaves = []
     for node in node_sequence:
         if node[1] == 1:
             Leaves.append(node[0])
 
-    #construct parents and children
+    # construct parents and children
     parent = np.zeros(N, dtype=int) - 1
     children = [[] for i in range(N)]
     for parent_id, child_id in nx.dfs_edges(tree, source=root):
@@ -31,16 +32,16 @@ def compute_tmd(tree, positions):
 
     print(parent)
     TMD = []
-    #A is the list of active nodes
+    # A is the list of active nodes
     A = Leaves
     v = np.zeros(N)
     for leaf in Leaves:
-        v[leaf] = np.linalg.norm(positions[leaf]-positions[root])
+        v[leaf] = np.linalg.norm(positions[leaf] - positions[root])
     while not (root in A):
         for leaf in A:
             p = parent[leaf]
             C = children[p]
-            
+
             CinA = True
             for n in C:
                 CinA = (n in A) and CinA
@@ -55,24 +56,28 @@ def compute_tmd(tree, positions):
                 for ci in C:
                     A.remove(ci)
                     if ci != cm:
-                        TMD.append((v[ci], np.linalg.norm(positions[p]-positions[root])))
+                        TMD.append(
+                            (v[ci], np.linalg.norm(positions[p] - positions[root]))
+                        )
                 v[p] = v[cm]
     TMD.append((v[root], 0))
     return np.array(TMD)
+
 
 def get_TMD_vector(bc, reso=100, graphic=False):
     """
     compute the flatten persistence image associted to the barcode bc
     """
-    PI = PersistenceImage(bandwidth=1, resolution=[reso,reso])
+    PI = PersistenceImage(bandwidth=1, resolution=[reso, reso])
     pi = PI.fit_transform([bc])
 
-    pi2 = np.flip(np.reshape(pi[0], [reso,reso]), 0)
+    pi2 = np.flip(np.reshape(pi[0], [reso, reso]), 0)
     if graphic:
         plt.imshow(pi2)
         plt.title("Persistence Image")
         plt.show()
     return pi2.flatten()
+
 
 graph = nx.generators.trees.random_tree(15)
 pos = nx.spring_layout(graph)

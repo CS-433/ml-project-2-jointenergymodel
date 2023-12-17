@@ -138,14 +138,14 @@ def preprocess(
     print("Finding the nuclei...")
     blobs = blob_doh(nuclei_img, min_sigma=30, max_sigma=80)
     neuron_centers = [(int(x), int(y)) for (x, y, _) in blobs]
-    
+
     if graphical:
         # Show blobs
         fig, ax = plt.subplots()
-        ax.imshow(nuclei_img, cmap='gray')
+        ax.imshow(nuclei_img, cmap="gray")
         for blob in blobs:
             x, y, r = blob
-            ax.add_patch(plt.Circle((y, x), r, color='g', fill=False, linewidth=2.0))
+            ax.add_patch(plt.Circle((y, x), r, color="g", fill=False, linewidth=2.0))
 
         plt.show()
 
@@ -165,7 +165,7 @@ def preprocess(
     if graphical:
         # Show blobs
         fig, ax = plt.subplots()
-        ax.imshow(merged_img, cmap='gray')
+        ax.imshow(merged_img, cmap="gray")
         plt.show()
 
     print("Creating the graph...")
@@ -254,7 +254,7 @@ if len(sys.argv) != 1:
     print("Usage: python preprocessing.py")
     sys.exit(1)
 
-'''
+"""
 preprocess(
     'output',
     'example',
@@ -263,7 +263,7 @@ preprocess(
     io.imread('dendrites3.png'),
     graphical=True,
 )
-'''
+"""
 
 # Extract the two arguments
 preprocess_folder()

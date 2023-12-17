@@ -66,12 +66,14 @@ class TwoStageMLP(nn.Module):
 
         # Combined MLP for the extracted features and other features
         input_size_stage2 = k + num_other_features
-        self.mlp_stage2 = create_mlp(input_size_stage2, hidden_sizes_stage2, output_size)
+        self.mlp_stage2 = create_mlp(
+            input_size_stage2, hidden_sizes_stage2, output_size
+        )
 
     def forward(self, features):
         # Split features into image_features and other_features
-        image_features = features[:, :self.image_size]
-        other_features = features[:, self.image_size:]
+        image_features = features[:, : self.image_size]
+        other_features = features[:, self.image_size :]
 
         # MLP for the persistent image
         image_output = self.mlp_stage1(image_features)
@@ -182,35 +184,39 @@ def hyperparameter_search(
 
     for hidden_size_option_stage1 in hidden_size_options_stage1:
         for k in ks:
-          for hidden_size_option_stage2 in hidden_size_options_stage2:
-              model = TwoStageMLP(
-                  features.shape[1] - num_other_features,
-                  num_other_features,
-                  k,
-                  hidden_size_option_stage1,
-                  hidden_size_option_stage2,
-                  len(np.unique(labels)),
-              )
-              print(f"\nHidden Size (Stage 1): {hidden_size_option_stage1}")
-              print(f"k: {k}")
-              print(f"Hidden Size (Stage 2): {hidden_size_option_stage2}")
+            for hidden_size_option_stage2 in hidden_size_options_stage2:
+                model = TwoStageMLP(
+                    features.shape[1] - num_other_features,
+                    num_other_features,
+                    k,
+                    hidden_size_option_stage1,
+                    hidden_size_option_stage2,
+                    len(np.unique(labels)),
+                )
+                print(f"\nHidden Size (Stage 1): {hidden_size_option_stage1}")
+                print(f"k: {k}")
+                print(f"Hidden Size (Stage 2): {hidden_size_option_stage2}")
 
-              score = np.average(
-                  cross_validation(
-                      model,
-                      features,
-                      labels,
-                      num_epochs=num_epochs,
-                      batch_size=batch_size,
-                      learning_rate=learning_rate,
-                      num_splits=num_splits,
-                  )
-              )
+                score = np.average(
+                    cross_validation(
+                        model,
+                        features,
+                        labels,
+                        num_epochs=num_epochs,
+                        batch_size=batch_size,
+                        learning_rate=learning_rate,
+                        num_splits=num_splits,
+                    )
+                )
 
-              if score > best_score:
-                  best_score = score
-                  best_model = model
-                  best_options = [hidden_size_option_stage1, k, hidden_size_option_stage2]
+                if score > best_score:
+                    best_score = score
+                    best_model = model
+                    best_options = [
+                        hidden_size_option_stage1,
+                        k,
+                        hidden_size_option_stage2,
+                    ]
 
     print("\nBest Model:")
     print(f"Hidden Size (Stage 1): {best_options[0]}")
@@ -223,7 +229,7 @@ def hyperparameter_search(
 def get_best_model(pers_resolution: int = 100):
     features, labels = load_dataset(DATASET_PATH)
     features = standardize_features(features)
-  
+
     # Compute image size and num_other_features
     image_size = pers_resolution * pers_resolution
     num_other_features = features.shape[1] - image_size
@@ -246,11 +252,11 @@ def get_best_model(pers_resolution: int = 100):
         [16, 8, 4],
     ]
     ks = [
-      1,
-      len(np.unique(labels)),
-      10,
-      pers_resolution,
-      pers_resolution * pers_resolution
+        1,
+        len(np.unique(labels)),
+        10,
+        pers_resolution,
+        pers_resolution * pers_resolution,
     ]
 
     return hyperparameter_search(
