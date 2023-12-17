@@ -37,10 +37,18 @@ def get_persistent_entropy(ph_neu):
 
     return persistent_entropy
 
-
 def get_features(graph, pos, resolution):
+    # In case the graph is a point
+    if graph.size() == 0:
+        barcode = np.array([[0,0]])
+        persistent_entropy = 0
+        image = get_TMD_vector(barcode, resolution, False)
+        return np.concatenate((image, [persistent_entropy]))
+
+
     # Compute the barcode
-    barcode = compute_tmd(graph, np.array(pos))
+    #barcode = compute_tmd(graph, np.array(pos))
+    barcode = compute_tmd(graph, pos)
 
     persistent_entropy = get_persistent_entropy(barcode)
 

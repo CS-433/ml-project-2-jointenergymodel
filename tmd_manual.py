@@ -11,6 +11,7 @@ def compute_tmd(tree, positions):
     positions is a dictionary with the positions (numpy array) associated to each node
     """
     assert nx.is_tree(tree)
+    assert (tree.size() > 0)
     N = len(positions)
 
     # get root
