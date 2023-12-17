@@ -6,9 +6,12 @@
         "imread",
         "imshow",
         "linalg",
+        "ndimage",
         "networkx",
         "neurites",
         "savetxt",
-        "skeletonize"
+        "skeletonize",
+        "skeletonized",
+        "skimage"
     ]
 }

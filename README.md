@@ -13,3 +13,20 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+
+To execute the entire pipeline, do:
+```bash
+python __init__.py
+```
+This will download all necessary assets, do the preprocessing and compute the best NN.
+
+To compute the preprocessing of the input images, do:
+```bash
+python preprocessing.py
+```
+
+To work directly on the model:
+```bash
+python model.py
+```
+This will download the input folder (if needed), and compute the dataset in `output/dataset.csv`.

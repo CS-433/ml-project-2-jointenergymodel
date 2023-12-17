@@ -1,3 +1,5 @@
+import os
+import urllib.request
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import StratifiedKFold
@@ -10,17 +12,24 @@ from torch.utils.data import DataLoader, TensorDataset
 from config import DATASET_PATH
 
 
-def load_dataset(csv_path):
+def load_dataset():
     """
-    Load the dataset made of labels and TMD features stored ar csv_path
-        - csv_path: String giving the path where the dataset is stored
+    Load the dataset made of labels and TMD features
     Returns features and labels as Pandas DataFrames
     """
+    print("Loading dataset...")
+    
+    # If needed, load from the cloud
+    csv_path = 'output/dataset.csv'
+    if not os.path.exists(csv_path):
+        os.makedirs('output', exist_ok=True)
+        urllib.request.urlretrieve(DATASET_PATH, csv_path)
+
     df = pd.read_csv(csv_path)
     labels = df.iloc[:, 0].values.astype(int)
     features = df.iloc[:, 1:].values
+    print("[OK] Dataset is loaded")
     return features, labels
-
 
 def standardize_features(features):
     """
@@ -227,7 +236,7 @@ def hyperparameter_search(
 
 
 def get_best_model(pers_resolution: int = 100):
-    features, labels = load_dataset(DATASET_PATH)
+    features, labels = load_dataset()
     features = standardize_features(features)
 
     # Compute image size and num_other_features
@@ -269,4 +278,5 @@ def get_best_model(pers_resolution: int = 100):
     )
 
 
-get_best_model()
+if __name__ == "__main__":
+    get_best_model()

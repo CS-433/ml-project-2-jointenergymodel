@@ -30,6 +30,9 @@ def get_persistent_entropy(ph_neu):
     # Calculate the total length of all bars
     total_length = np.sum(lengths)
 
+    if total_length == 0:
+        return 0.0
+
     # Compute the persistent entropy using the formula from the paper
     persistent_entropy = -np.sum(
         lengths / total_length * np.log((lengths + 1e-10) / total_length)
