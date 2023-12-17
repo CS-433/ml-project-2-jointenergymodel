@@ -18,11 +18,11 @@ def load_dataset():
     Returns features and labels as Pandas DataFrames
     """
     print("Loading dataset...")
-    
+
     # If needed, load from the cloud
-    csv_path = 'output/dataset.csv'
+    csv_path = "output/dataset.csv"
     if not os.path.exists(csv_path):
-        os.makedirs('output', exist_ok=True)
+        os.makedirs("output", exist_ok=True)
         urllib.request.urlretrieve(DATASET_PATH, csv_path)
 
     df = pd.read_csv(csv_path)
@@ -30,6 +30,7 @@ def load_dataset():
     features = df.iloc[:, 1:].values
     print("[OK] Dataset is loaded")
     return features, labels
+
 
 def standardize_features(features):
     """

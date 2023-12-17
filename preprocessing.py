@@ -20,24 +20,26 @@ from skimage.morphology import skeletonize
 from scipy.ndimage import binary_dilation
 from scipy.spatial import cKDTree
 import networkx as nx
-from get_tmd import get_features
+from tmd import get_features
 from config import INPUT_PATH
 
+
 def load_input_folder():
-    """ Retrieves the input folder from the cloud, if necessary """
+    """Retrieves the input folder from the cloud, if necessary"""
     # Check if the input folder already exists
-    if os.path.exists('input'):
+    if os.path.exists("input"):
         return
 
     # Download the zip file
-    urllib.request.urlretrieve(INPUT_PATH, 'input.zip')
+    urllib.request.urlretrieve(INPUT_PATH, "input.zip")
 
     # Unzip the file
-    with zipfile.ZipFile('input.zip', 'r') as zip_ref:
-        zip_ref.extractall('.')
+    with zipfile.ZipFile("input.zip", "r") as zip_ref:
+        zip_ref.extractall(".")
 
     # Remove the downloaded zip file
-    os.remove('input.zip')
+    os.remove("input.zip")
+
 
 def compute_shortest_paths(image, positions):
     """
@@ -198,7 +200,9 @@ def preprocess(
     print("Extracting the topological features...")
     # Rename the nodes
     assert graph.order() == len(neuron_centers)
-    graph = nx.relabel_nodes(graph, {old: new for new, old in enumerate(neuron_centers)})
+    graph = nx.relabel_nodes(
+        graph, {old: new for new, old in enumerate(neuron_centers)}
+    )
     # Extract the largest component to avoid the isolated nuclei
     largest_cc = graph.subgraph(max(nx.connected_components(graph), key=len)).copy()
 
@@ -270,6 +274,7 @@ def preprocess_folder(pers_resolution=100):
                     pers_resolution=pers_resolution,
                 )
                 np.savetxt(file, [res], delimiter=",")
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 1:
