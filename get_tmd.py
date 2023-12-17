@@ -47,8 +47,7 @@ def get_features(graph, pos, resolution):
 
 
     # Compute the barcode
-    #barcode = compute_tmd(graph, np.array(pos))
-    barcode = compute_tmd(graph, pos)
+    barcode = compute_tmd(graph, np.array(pos))
 
     persistent_entropy = get_persistent_entropy(barcode)
 
