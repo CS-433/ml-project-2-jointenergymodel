@@ -80,10 +80,10 @@ def create_graph(image, centers):
     # Find the minimum spanning tree
     mst = nx.minimum_spanning_tree(graph)
 
-    return mst
+    return graph, mst
 
 
-def plot_graph_on_image(output_folder, name, image, centers, graph):
+def plot_graph_on_image(image, centers, graph):
     """
     Plots the Minimum Spanning Tree (MST) graph on top of the original image.
     Input:
@@ -96,9 +96,8 @@ def plot_graph_on_image(output_folder, name, image, centers, graph):
 
     plt.figure()
     plt.imshow(image, cmap="gray")
-    nx.draw(graph, pos, node_color="g", node_size=10, edge_color="r")
-    plt.savefig(os.path.join(output_folder, name + "-graph.png"), bbox_inches="tight")
-    plt.clf()
+    nx.draw(graph, pos, node_color="g", node_size=80, width=2.0, edge_color="r")
+    plt.show()
 
 
 def closest_true_pixels(image, positions):
@@ -139,6 +138,16 @@ def preprocess(
     print("Finding the nuclei...")
     blobs = blob_doh(nuclei_img, min_sigma=30, max_sigma=80)
     neuron_centers = [(int(x), int(y)) for (x, y, _) in blobs]
+    
+    if graphical:
+        # Show blobs
+        fig, ax = plt.subplots()
+        ax.imshow(nuclei_img, cmap='gray')
+        for blob in blobs:
+            x, y, r = blob
+            ax.add_patch(plt.Circle((y, x), r, color='g', fill=False, linewidth=2.0))
+
+        plt.show()
 
     print("Refining the image...")
     # Merge the nuclei into the image since they provide useful information
@@ -153,16 +162,27 @@ def preprocess(
     # Find the closest ones to the original centers
     refined_neuron_centers = closest_true_pixels(merged_img, neuron_centers)
 
+    if graphical:
+        # Show blobs
+        fig, ax = plt.subplots()
+        ax.imshow(merged_img, cmap='gray')
+        plt.show()
+
     print("Creating the graph...")
-    graph = create_graph(merged_img, refined_neuron_centers)
+    graph0, graph = create_graph(merged_img, refined_neuron_centers)
 
     if graphical:
+        # Plot the graph before being a tree
+        plot_graph_on_image(dendrites_img, neuron_centers, graph0)
         # Plot the resulting graph
-        plot_graph_on_image(output_folder, name, dendrites_img, neuron_centers, graph)
+        plot_graph_on_image(dendrites_img, neuron_centers, graph)
 
     print("Extracting the topological features...")
     # Extract the largest component to avoid the isolated nuclei
     largest_cc = graph.subgraph(max(nx.connected_components(graph), key=len)).copy()
+    if graphical:
+        # Plot the connected component we consider
+        plot_graph_on_image(dendrites_img, neuron_centers, largest_cc)
     networkx_to_swc(largest_cc, refined_neuron_centers, "temp.swc")
 
     # Find the final x and y
@@ -233,6 +253,17 @@ def preprocess_folder(pers_resolution=100):
 if len(sys.argv) != 1:
     print("Usage: python preprocessing.py")
     sys.exit(1)
+
+'''
+preprocess(
+    'output',
+    'example',
+    0,
+    io.imread('nuclei3.png'),
+    io.imread('dendrites3.png'),
+    graphical=True,
+)
+'''
 
 # Extract the two arguments
 preprocess_folder()
