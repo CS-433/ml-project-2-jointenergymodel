@@ -145,6 +145,7 @@ def cross_validation(
                 optimizer.zero_grad()
                 outputs = model(batch_features)
                 loss = criterion(outputs, batch_labels)
+                #loss = torch.nn.functional.cross_entropy(outputs, batch_labels, weight=torch.tensor([0.25, 0.75], dtype=torch.float32))
                 loss.backward()
                 optimizer.step()
 
