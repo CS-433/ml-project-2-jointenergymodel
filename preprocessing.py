@@ -9,16 +9,36 @@ Then `preprocess_folder` executes it on a batch of files.
 import sys
 import os
 import shutil
+import urllib.request
+import zipfile
 import numpy as np
 import matplotlib.pyplot as plt
 from skimage.graph import pixel_graph
-from scipy.ndimage import binary_dilation
 from skimage.feature import blob_doh
 from skimage import io
 from skimage.morphology import skeletonize
+from scipy.ndimage import binary_dilation
 from scipy.spatial import cKDTree
 import networkx as nx
-from get_tmd import get_features
+from tmd import get_features
+from config import INPUT_PATH
+
+
+def load_input_folder():
+    """Retrieves the input folder from the cloud, if necessary"""
+    # Check if the input folder already exists
+    if os.path.exists("input"):
+        return
+
+    # Download the zip file
+    urllib.request.urlretrieve(INPUT_PATH, "input.zip")
+
+    # Unzip the file
+    with zipfile.ZipFile("input.zip", "r") as zip_ref:
+        zip_ref.extractall(".")
+
+    # Remove the downloaded zip file
+    os.remove("input.zip")
 
 
 def compute_shortest_paths(image, positions):
@@ -180,7 +200,9 @@ def preprocess(
     print("Extracting the topological features...")
     # Rename the nodes
     assert graph.order() == len(neuron_centers)
-    graph = nx.relabel_nodes(graph, {old: new for new, old in enumerate(neuron_centers)})
+    graph = nx.relabel_nodes(
+        graph, {old: new for new, old in enumerate(neuron_centers)}
+    )
     # Extract the largest component to avoid the isolated nuclei
     largest_cc = graph.subgraph(max(nx.connected_components(graph), key=len)).copy()
 
@@ -197,6 +219,9 @@ def preprocess(
 def preprocess_folder(pers_resolution=100):
     # Input path is always `input`
     input_path = "input"
+
+    # Retrieves input folder, if necessary
+    load_input_folder()
 
     # Find output path and create it if necessary
     output_path = os.path.join(os.path.dirname(input_path), "output")
@@ -251,20 +276,23 @@ def preprocess_folder(pers_resolution=100):
                 np.savetxt(file, [res], delimiter=",")
 
 
-if len(sys.argv) != 1:
-    print("Usage: python preprocessing.py")
-    sys.exit(1)
+if __name__ == "__main__":
+    if len(sys.argv) != 1:
+        print("Usage: python preprocessing.py")
+        sys.exit(1)
 
-"""
-preprocess(
-    'output',
-    'example',
-    0,
-    io.imread('nuclei3.png'),
-    io.imread('dendrites3.png'),
-    graphical=True,
-)
-"""
-
-# Extract the two arguments
-preprocess_folder()
+    # Uncomment if you want to do preprocessing on a single image
+    """
+    nuclei_img = 'nuclei3.png'
+    dendrites_img = 'dendrites3.png'
+    preprocess(
+        'output',
+        'example',
+        0,
+        io.imread(nuclei_img),
+        io.imread(dendrites_img),
+        graphical=True,
+    )
+    """
+    # Extract the two arguments
+    preprocess_folder()

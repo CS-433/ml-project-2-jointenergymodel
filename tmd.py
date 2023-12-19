@@ -1,3 +1,7 @@
+"""
+Computing the Topological Morphology Descriptor (TMD) and other topological features
+"""
+
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -20,7 +24,7 @@ def compute_tmd(tree, positions):
     positions is a dictionary with the positions (numpy array) associated to each node
     """
     assert nx.is_tree(tree)
-    assert (tree.size() > 0)
+    assert tree.size() > 0
     N = len(positions)
 
     # get root
@@ -79,9 +83,9 @@ def get_limits(phs_list):
     ylim = [min(np.transpose(ph)[1]), max(np.transpose(ph)[1])]
     return xlim, ylim
 
-def get_TMD_vector(bc, reso=100, graphic=False):
+def get_tmd_vector(bc, reso=100, graphic=False):
     """
-    compute the flatten persistence image associted to the barcode bc
+    Compute the flatten persistence image associated with the barcode bc
     """
     # PI = PersistenceImage(bandwidth=100, resolution=[reso, reso])
     # pi = PI.fit_transform([bc])
@@ -111,39 +115,59 @@ def get_TMD_vector(bc, reso=100, graphic=False):
     return pi2.flatten()
 
 
-'''
-graph = nx.generators.trees.random_tree(15)
-pos = nx.spring_layout(graph)
+def get_persistent_entropy(ph_neu):
+    """
+    Computes the persistent entropy of a persistence diagram.
 
-# node_sequence = sorted(graph.degree, key=lambda x: x[1], reverse=True)
-# soma = node_sequence[0][0]
+    Parameters:
+    - ph_neu: Persistence diagram.
 
-# L = []
-# for node in node_sequence:
-#     if node[1] == 1:
-#         L.append(node[0])
+    Returns:
+    - float: Persistent entropy value.
+    """
+    # Extract the persistence intervals from the input
+    intervals = ph_neu
 
-barcode = compute_tmd(graph, pos)
+    # Filter out infinite intervals (unbounded persistence)
+    finite_intervals = np.array(
+        [interval for interval in intervals if np.isfinite(interval).all()]
+    )
 
-print(barcode)
-nx.draw(graph, pos=pos, with_labels=True)
-# diag = np.array(barcode)
-# print(diag)
+    # Handle the case where there are no finite intervals
+    if len(finite_intervals) == 0:
+        return 0.0
 
-# fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(12, 5))
-# plot_persistence_diagram(persistence=diag)
-# plot_persistence_barcode(persistence=diag)
+    # Calculate the length of each bar
+    lengths = np.abs(finite_intervals[:, 1] - finite_intervals[:, 0])
+
+    # Calculate the total length of all bars
+    total_length = np.sum(lengths)
+
+    if total_length == 0:
+        return 0.0
+
+    # Compute the persistent entropy using the formula from the paper
+    persistent_entropy = -np.sum(
+        lengths / total_length * np.log((lengths + 1e-10) / total_length)
+    )
+
+    return persistent_entropy
 
 
-# PI = PersistenceImage(resolution=[100,100])
-# pi = PI.fit_transform([diag])
+def get_features(graph, pos, resolution):
+    # In case the graph is a point
+    if graph.size() == 0:
+        barcode = np.array([[0, 0]])
+        persistent_entropy = 0
+        image = get_tmd_vector(barcode, resolution, False)
+        return np.concatenate((image, [persistent_entropy]))
 
-# plt.imshow(np.flip(np.reshape(pi[0], [100,100]), 0))
-# plt.title("Persistence Image")
+    # Compute the barcode
+    barcode = compute_tmd(graph, np.array(pos))
 
-vect = get_TMD_vector(barcode, 20, False)
-print(vect.shape)
+    persistent_entropy = get_persistent_entropy(barcode)
 
+    # Get the persistance image
+    image = get_tmd_vector(barcode, resolution, False)
 
-plt.show()
-'''
+    return np.concatenate((image, [persistent_entropy]))
