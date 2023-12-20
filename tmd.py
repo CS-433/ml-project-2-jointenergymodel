@@ -2,17 +2,13 @@
 Computing the Topological Morphology Descriptor (TMD) and other topological features
 """
 
-import numpy as np
-import networkx as nx
-import matplotlib.pyplot as plt
-from gudhi import plot_persistence_diagram, plot_persistence_barcode
-from gudhi.representations import PersistenceImage
-
 import copy
 import math
 from itertools import chain
-
 import numpy as np
+import networkx as nx
+import matplotlib.pyplot as plt
+from gudhi.representations import PersistenceImage
 from numpy.linalg import norm
 from scipy import stats
 from scipy.spatial.distance import cdist
@@ -34,7 +30,7 @@ def compute_tmd(tree, positions):
     # construct leaves
     Leaves = []
     for node in node_sequence:
-        if (node[1] == 1) and (node[0]!=root):
+        if (node[1] == 1) and (node[0] != root):
             Leaves.append(node[0])
 
     # construct parents and children
@@ -76,6 +72,7 @@ def compute_tmd(tree, positions):
     TMD.append((v[root], 0))
     return np.array(TMD)
 
+
 def get_limits(phs_list):
     """Returns the x-y coordinates limits (min, max) for a list of persistence diagrams."""
     ph = copy.deepcopy(phs_list)
@@ -93,8 +90,8 @@ def get_tmd_vector_depr(bc, reso=100, graphic=False):
     X, Y = np.mgrid[xlim[0] : xlim[1] : res, ylim[0] : ylim[1] : res]
 
     values = np.transpose(bc).astype(np.float64)
-    if values.shape[1]==1:
-        values = np.concatenate((values, np.array([2,0]).reshape((2,1))), axis=1)
+    if values.shape[1] == 1:
+        values = np.concatenate((values, np.array([2, 0]).reshape((2, 1))), axis=1)
     offset = np.random.rand(values.shape[1])
     values[1] += offset
     try:
@@ -102,12 +99,12 @@ def get_tmd_vector_depr(bc, reso=100, graphic=False):
         positions = np.vstack([X.ravel(), Y.ravel()])
         Z = np.reshape(kernel(positions).T, X.shape)
     except:
-        Z = np.ones((100,100))
+        Z = np.ones((100, 100))
 
     norm_factor = np.max(Z)
 
     if graphic:
-        plt.imshow(Z/norm_factor)
+        plt.imshow(Z / norm_factor)
         plt.title("Persistence Image")
         plt.show()
 
@@ -169,8 +166,7 @@ def get_persistent_entropy(ph_neu):
 def get_features(graph, pos, resolution):
     # In case the graph is a point
     if graph.size() == 0:
-        barcode = np.array([[1, 0],
-                            [2, 0]])
+        barcode = np.array([[1, 0], [2, 0]])
         persistent_entropy = 0
         image = get_tmd_vector(barcode, resolution, False)
         return np.concatenate((image, [persistent_entropy]))
