@@ -9,6 +9,7 @@ Then `preprocess_folder` executes it on a batch of files.
 import sys
 import os
 import shutil
+import multiprocessing as mp
 import urllib.request
 import zipfile
 import numpy as np
@@ -30,15 +31,18 @@ def load_input_folder():
     if os.path.exists("input"):
         return
 
+    print("Downloading the dataset...")
     # Download the zip file
     urllib.request.urlretrieve(INPUT_PATH, "input.zip")
 
     # Unzip the file
+    print("Unzipping the dataset...")
     with zipfile.ZipFile("input.zip", "r") as zip_ref:
         zip_ref.extractall(".")
 
     # Remove the downloaded zip file
     os.remove("input.zip")
+    print("Dataset is downloaded")
 
 
 def compute_shortest_paths(image, positions):
@@ -147,7 +151,7 @@ def preprocess(
     label,
     nuclei_img,
     dendrites_img,
-    pers_resolution=100,
+    pers_resolution,
     graphical=False,
 ):
     """
@@ -155,7 +159,7 @@ def preprocess(
     and returns the corresponding topological features.
     """
     # Find blobs
-    print("Finding the nuclei...")
+    print(f"[{name}] Finding the nuclei...")
     blobs = blob_doh(nuclei_img, min_sigma=30, max_sigma=80)
     neuron_centers = [(int(x), int(y)) for (x, y, _) in blobs]
 
@@ -169,7 +173,7 @@ def preprocess(
 
         plt.show()
 
-    print("Refining the image...")
+    print(f"[{name}] Refining the image...")
     # Merge the nuclei into the image since they provide useful information
     # and morph into a binary image
     merged_img = (nuclei_img != 0) | (dendrites_img != 0)
@@ -188,7 +192,7 @@ def preprocess(
         ax.imshow(merged_img, cmap="gray")
         plt.show()
 
-    print("Creating the graph...")
+    print(f"[{name}] Creating the graph...")
     graph0, graph = create_graph(merged_img, refined_neuron_centers)
 
     if graphical:
@@ -197,7 +201,7 @@ def preprocess(
         # Plot the resulting graph
         plot_graph_on_image(dendrites_img, neuron_centers, graph)
 
-    print("Extracting the topological features...")
+    print(f"[{name}] Extracting the topological features...")
     # Rename the nodes
     assert graph.order() == len(neuron_centers)
     graph = nx.relabel_nodes(
@@ -214,6 +218,28 @@ def preprocess(
     x = get_features(largest_cc, neuron_centers, pers_resolution)
 
     return np.concatenate(([label], x, [largest_cc.order()]))
+
+
+def atomic_preprocessing(input_args):
+    """
+    Preprocessing function that can actually be parallelized per image
+    """
+    y, label, nuclei_path, input_path, output_path, pers_resolution = input_args
+    name = nuclei_path.replace("w3confDAPI", "")
+    dendrites_path = nuclei_path.replace("w3confDAPI", "w2confmCherry")
+    nuclei_img = io.imread(os.path.join(input_path, label, "nuclei", nuclei_path))
+    dendrites_img = io.imread(
+        os.path.join(input_path, label, "dendrites", dendrites_path)
+    )
+
+    return preprocess(
+        output_path,
+        name,
+        y,
+        nuclei_img,
+        dendrites_img,
+        pers_resolution,
+    )
 
 
 def preprocess_folder(pers_resolution=100):
@@ -247,32 +273,20 @@ def preprocess_folder(pers_resolution=100):
         for i, label in enumerate(labels):
             file.write(f"{i} {label}\n")
 
-    # Compute the dataset, one image at a time
-    with open(os.path.join(output_path, "dataset.csv"), "w") as file:
-        for y, label in enumerate(labels):
-            print("****************************")
-            print(f"Considering label `{label}`")
-            nuclei_paths = [
-                f for f in os.listdir(os.path.join(input_path, label, "nuclei"))
-            ]
-            for nuclei_path in nuclei_paths:
-                name = nuclei_path.replace("w3confDAPI", "")
-                print(f"* Computing for {name}")
-                dendrites_path = nuclei_path.replace("w3confDAPI", "w2confmCherry")
-                nuclei_img = io.imread(
-                    os.path.join(input_path, label, "nuclei", nuclei_path)
-                )
-                dendrites_img = io.imread(
-                    os.path.join(input_path, label, "dendrites", dendrites_path)
-                )
-                res = preprocess(
-                    output_path,
-                    name,
-                    y,
-                    nuclei_img,
-                    dendrites_img,
-                    pers_resolution=pers_resolution,
-                )
+    # Compute the dataset in parallel
+    nuclei_paths = [
+        (y, label, path, input_path, output_path, pers_resolution)
+        for y, label in enumerate(labels)
+        for path in os.listdir(os.path.join(input_path, label, "nuclei"))
+    ]
+
+    # Compute all in parallel
+    with mp.Pool(processes=mp.cpu_count()) as pool:
+        results = pool.map(atomic_preprocessing, nuclei_paths)
+
+        # Save results to the file
+        with open(os.path.join(output_path, "dataset.csv"), "w") as file:
+            for res in results:
                 np.savetxt(file, [res], delimiter=",")
 
 
