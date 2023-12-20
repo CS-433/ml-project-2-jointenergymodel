@@ -83,9 +83,9 @@ def get_limits(phs_list):
     ylim = [min(np.transpose(ph)[1]), max(np.transpose(ph)[1])]
     return xlim, ylim
 
-def get_tmd_vector(bc, reso=100, graphic=False):
+def get_tmd_vector_depr(bc, reso=100, graphic=False):
     """
-    Compute the flatten persistence image associated with the barcode bc
+    Compute the flatten persistence image associated with the barcode bc using the method from TMD library
     """
 
     xlim, ylim = get_limits(bc)
@@ -112,6 +112,20 @@ def get_tmd_vector(bc, reso=100, graphic=False):
         plt.show()
 
     return (Z / norm_factor).flatten()
+
+def get_tmd_vector(bc, reso=100):
+    """
+    Compute the flatten persistence image associated with the barcode bc using GUDHI library
+    """
+    n = bc.shape[0]
+    PI = PersistenceImage(bandwidth=n**(-1.0/6), resolution=[reso, reso])
+    pi = PI.fit_transform([bc])
+
+    pi2 = np.flip(np.reshape(pi[0], [reso, reso]), 0)
+    norm_factor = np.max(pi2)
+    print(norm_factor)
+    pi2 = pi2/norm_factor
+    return pi2.flatten()
 
 def get_persistent_entropy(ph_neu):
     """
