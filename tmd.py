@@ -3,24 +3,11 @@ Computing the Topological Morphology Descriptor (TMD) and other topological feat
 """
 
 import copy
-import math
-from itertools import chain
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 from gudhi.representations import PersistenceImage
-from numpy.linalg import norm
 from scipy import stats
-from scipy.spatial.distance import cdist
-
-def compute_path_length(parents, positions, root, node):
-    l = 0.0
-    if root == node: return l
-    while parents[node] != root:
-        l += np.linalg.norm(positions[node] - positions[parents[node]])
-        node = parents[node]
-    l += np.linalg.norm(positions[node] - positions[root])
-    return l
 
 def compute_tmd(tree, positions):
     """
@@ -53,8 +40,7 @@ def compute_tmd(tree, positions):
     A = Leaves
     v = np.zeros(N)
     for leaf in Leaves:
-        # v[leaf] = np.linalg.norm(positions[leaf] - positions[root])
-        v[leaf] = compute_path_length(parent, positions, root, leaf)
+        v[leaf] = nx.shortest_path_length(tree, source=root, target=leaf)
     while not (root in A):
         for leaf in A:
             p = parent[leaf]
@@ -74,10 +60,7 @@ def compute_tmd(tree, positions):
                 for ci in C:
                     A.remove(ci)
                     if ci != cm:
-                        TMD.append(
-                            (v[ci], np.linalg.norm(positions[p] - positions[root]))
-                        )
-                        TMD.append((v[ci], compute_path_length(parent, positions, root, p)))
+                        TMD.append((v[ci], nx.shortest_path_length(tree, source=root, target=p)))
                 v[p] = v[cm]
     TMD.append((v[root], 0))
     return np.array(TMD)
@@ -130,7 +113,6 @@ def get_tmd_vector(bc, reso=100):
 
     pi2 = np.flip(np.reshape(pi[0], [reso, reso]), 0)
     norm_factor = np.max(pi2)
-    print(norm_factor)
     pi2 = pi2/norm_factor
     return pi2.flatten()
 
