@@ -145,8 +145,9 @@ def closest_true_pixels(image, positions):
     assert all(image[pos] for pos in closest_pixels)
     return closest_pixels
 
+
 def graph_polynomial_factorization_coefficients(graph):
-    x = symbols('x')
+    x = symbols("x")
     polynomial = sum(x ** graph.degree(node) for node in graph.nodes)
 
     _, factors = factor_list(polynomial)
@@ -154,8 +155,12 @@ def graph_polynomial_factorization_coefficients(graph):
     factors = [Poly(factor).all_coeffs() for factor in factors]
     N = 10
     K = 8
-    factors = np.array([factor[-N:] + [0] * max(0, N - len(factor)) for factor in factors[:K]] + [[0] * N] * max(0, K - len(factors)))
+    factors = np.array(
+        [factor[-N:] + [0] * max(0, N - len(factor)) for factor in factors[:K]]
+        + [[0] * N] * max(0, K - len(factors))
+    )
     return factors
+
 
 def preprocess(
     output_folder,
@@ -310,8 +315,8 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Uncomment if you want to do preprocessing on a single image
-    nuclei_img = 'nuclei3.png'
-    dendrites_img = 'dendrites3.png'
+    nuclei_img = "nuclei3.png"
+    dendrites_img = "dendrites3.png"
     """preprocess(
         'output',
         'example',
@@ -320,6 +325,6 @@ if __name__ == "__main__":
         io.imread(dendrites_img),
         100,
     )"""
-    
+
     # Extract the two arguments
     preprocess_folder()
