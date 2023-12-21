@@ -21,6 +21,7 @@ from skimage.morphology import skeletonize
 from scipy.ndimage import binary_dilation
 from scipy.spatial import cKDTree
 import networkx as nx
+from sympy import symbols, factor_list, Poly
 from tmd import get_features
 from config import INPUT_PATH
 
@@ -144,6 +145,17 @@ def closest_true_pixels(image, positions):
     assert all(image[pos] for pos in closest_pixels)
     return closest_pixels
 
+def graph_polynomial_factorization_coefficients(graph):
+    x = symbols('x')
+    polynomial = sum(x ** graph.degree(node) for node in graph.nodes)
+
+    _, factors = factor_list(polynomial)
+    factors = [factor[0] for factor in factors]
+    factors = [Poly(factor).all_coeffs() for factor in factors]
+    N = 10
+    K = 8
+    factors = np.array([factor[-N:] + [0] * max(0, N - len(factor)) for factor in factors[:K]] + [[0] * N] * max(0, K - len(factors)))
+    return factors
 
 def preprocess(
     output_folder,
@@ -160,7 +172,7 @@ def preprocess(
     """
     # Find blobs
     print(f"[{name}] Finding the nuclei...")
-    blobs = blob_doh(nuclei_img, min_sigma=30, max_sigma=80)
+    blobs = blob_doh(nuclei_img, min_sigma=10, max_sigma=80)
     neuron_centers = [(int(x), int(y)) for (x, y, _) in blobs]
 
     if graphical:
@@ -210,6 +222,8 @@ def preprocess(
     # Extract the largest component to avoid the isolated nuclei
     largest_cc = graph.subgraph(max(nx.connected_components(graph), key=len)).copy()
 
+    factors = graph_polynomial_factorization_coefficients(largest_cc)
+
     if graphical:
         # Plot the connected component we consider
         plot_graph_on_image(dendrites_img, neuron_centers, largest_cc)
@@ -217,7 +231,7 @@ def preprocess(
     # Find the final features
     x = get_features(largest_cc, neuron_centers, pers_resolution)
 
-    return np.concatenate(([label], x, [largest_cc.order()]))
+    return np.concatenate(([label], x, factors.flatten(), [largest_cc.order()]))
 
 
 def atomic_preprocessing(input_args):
@@ -296,17 +310,16 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Uncomment if you want to do preprocessing on a single image
-    """
     nuclei_img = 'nuclei3.png'
     dendrites_img = 'dendrites3.png'
-    preprocess(
+    """preprocess(
         'output',
         'example',
         0,
         io.imread(nuclei_img),
         io.imread(dendrites_img),
-        graphical=True,
-    )
-    """
+        100,
+    )"""
+    
     # Extract the two arguments
     preprocess_folder()
