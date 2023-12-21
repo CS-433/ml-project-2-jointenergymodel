@@ -178,7 +178,8 @@ def get_features(graph, pos, resolution):
     if graph.size() == 0:
         barcode = np.array([[1, 0], [2, 0]])
         persistent_entropy = 0
-        image = get_tmd_vector(barcode, resolution)
+        # image = get_tmd_vector(barcode, resolution)
+        image = np.zeros((resolution,resolution))
         return np.concatenate((image, [persistent_entropy]))
 
     # Compute the barcode
