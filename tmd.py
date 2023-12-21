@@ -17,6 +17,14 @@ from numpy.linalg import norm
 from scipy import stats
 from scipy.spatial.distance import cdist
 
+def compute_path_length(parents, positions, root, node):
+    l = 0.0
+    if root == node: return l
+    while parents[node] != root:
+        l += np.linalg.norm(positions[node] - positions[parents[node]])
+        node = parents[node]
+    l += np.linalg.norm(positions[node] - positions[root])
+    return l
 
 def compute_tmd(tree, positions):
     """
@@ -49,7 +57,8 @@ def compute_tmd(tree, positions):
     A = Leaves
     v = np.zeros(N)
     for leaf in Leaves:
-        v[leaf] = np.linalg.norm(positions[leaf] - positions[root])
+        # v[leaf] = np.linalg.norm(positions[leaf] - positions[root])
+        v[leaf] = compute_path_length(parent, positions, root, leaf)
     while not (root in A):
         for leaf in A:
             p = parent[leaf]
@@ -72,6 +81,7 @@ def compute_tmd(tree, positions):
                         TMD.append(
                             (v[ci], np.linalg.norm(positions[p] - positions[root]))
                         )
+                        TMD.append((v[ci], compute_path_length(parent, positions, root, p)))
                 v[p] = v[cm]
     TMD.append((v[root], 0))
     return np.array(TMD)
@@ -172,7 +182,7 @@ def get_features(graph, pos, resolution):
         barcode = np.array([[1, 0],
                             [2, 0]])
         persistent_entropy = 0
-        image = get_tmd_vector(barcode, resolution, False)
+        image = get_tmd_vector(barcode, resolution)
         return np.concatenate((image, [persistent_entropy]))
 
     # Compute the barcode
@@ -181,6 +191,6 @@ def get_features(graph, pos, resolution):
     persistent_entropy = get_persistent_entropy(barcode)
 
     # Get the persistance image
-    image = get_tmd_vector(barcode, resolution, False)
+    image = get_tmd_vector(barcode, resolution)
 
     return np.concatenate((image, [persistent_entropy]))
