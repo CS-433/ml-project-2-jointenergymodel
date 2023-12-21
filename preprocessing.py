@@ -160,7 +160,7 @@ def preprocess(
     """
     # Find blobs
     print(f"[{name}] Finding the nuclei...")
-    blobs = blob_doh(nuclei_img, min_sigma=30, max_sigma=80)
+    blobs = blob_doh(nuclei_img, min_sigma=10, max_sigma=80)
     neuron_centers = [(int(x), int(y)) for (x, y, _) in blobs]
 
     if graphical:

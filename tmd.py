@@ -73,35 +73,35 @@ def get_limits(phs_list):
     ylim = [min(np.transpose(ph)[1]), max(np.transpose(ph)[1])]
     return xlim, ylim
 
-def get_tmd_vector_depr(bc, reso=100, graphic=False):
-    """
-    Compute the flatten persistence image associated with the barcode bc using the method from TMD library
-    """
+# def get_tmd_vector_depr(bc, reso=100, graphic=False):
+#     """
+#     Compute the flatten persistence image associated with the barcode bc using the method from TMD library
+#     """
 
-    xlim, ylim = get_limits(bc)
-    res = complex(0, reso)
-    X, Y = np.mgrid[xlim[0] : xlim[1] : res, ylim[0] : ylim[1] : res]
+#     xlim, ylim = get_limits(bc)
+#     res = complex(0, reso)
+#     X, Y = np.mgrid[xlim[0] : xlim[1] : res, ylim[0] : ylim[1] : res]
 
-    values = np.transpose(bc).astype(np.float64)
-    if values.shape[1] == 1:
-        values = np.concatenate((values, np.array([2, 0]).reshape((2, 1))), axis=1)
-    offset = np.random.rand(values.shape[1])
-    values[1] += offset
-    try:
-        kernel = stats.gaussian_kde(values, bw_method=None, weights=None)
-        positions = np.vstack([X.ravel(), Y.ravel()])
-        Z = np.reshape(kernel(positions).T, X.shape)
-    except:
-        Z = np.ones((100, 100))
+#     values = np.transpose(bc).astype(np.float64)
+#     if values.shape[1] == 1:
+#         values = np.concatenate((values, np.array([2, 0]).reshape((2, 1))), axis=1)
+#     offset = np.random.rand(values.shape[1])
+#     values[1] += offset
+#     try:
+#         kernel = stats.gaussian_kde(values, bw_method=None, weights=None)
+#         positions = np.vstack([X.ravel(), Y.ravel()])
+#         Z = np.reshape(kernel(positions).T, X.shape)
+#     except:
+#         Z = np.ones((100, 100))
 
-    norm_factor = np.max(Z)
+#     norm_factor = np.max(Z)
 
-    if graphic:
-        plt.imshow(Z / norm_factor)
-        plt.title("Persistence Image")
-        plt.show()
+#     if graphic:
+#         plt.imshow(Z / norm_factor)
+#         plt.title("Persistence Image")
+#         plt.show()
 
-    return (Z / norm_factor).flatten()
+#     return (Z / norm_factor).flatten()
 
 def get_tmd_vector(bc, reso=100):
     """
@@ -156,12 +156,13 @@ def get_persistent_entropy(ph_neu):
 
 
 def get_features(graph, pos, resolution):
-    # In case the graph is a point
+    # In case the graph is a point, we need to change the barcode
     if graph.size() == 0:
         barcode = np.array([[1, 0], [2, 0]])
         persistent_entropy = 0
-        # image = get_tmd_vector(barcode, resolution)
-        image = np.zeros((resolution,resolution))
+        image = get_tmd_vector(barcode, resolution)
+        #image = np.zeros((resolution,resolution))
+        # image = image.flatten()
         return np.concatenate((image, [persistent_entropy]))
 
     # Compute the barcode
